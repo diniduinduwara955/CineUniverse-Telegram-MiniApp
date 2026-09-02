@@ -3,6 +3,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import express from 'express';
 import { startSupabaseRuntimeSync } from './supabase-runtime-sync.mjs';
+import { applyTmdbUploadMatchFix } from './tmdb-upload-match-fix.mjs';
 
 const ROOT = process.cwd();
 const serverDir = path.join(ROOT, 'server');
@@ -102,6 +103,7 @@ async function prepareTelegramPolling() {
 }
 
 await prepareTelegramPolling();
+await applyTmdbUploadMatchFix();
 await startSupabaseRuntimeSync();
 console.log(`[unified-bootstrap] starting existing backend on internal port ${BACKEND_PORT}`);
 
