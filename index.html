@@ -18,6 +18,62 @@
         else apply();
         new MutationObserver(apply).observe(document.documentElement, {childList:true, subtree:true, attributes:true, attributeFilter:['src']});
       })();
+
+      // Live Telegram catalog refresh layer.
+      // This is intentionally isolated in index.html so existing React logic remains untouched.
+      (function(){
+        const API_BASE = 'https://cineuniverse-telegram-miniapp.onrender.com/api';
+        const SIGNATURE_KEY = 'cine-live-catalog-signature';
+        const POLL_MS = 15000;
+
+        function makeSignature(movieData, tvData){
+          const movies = Array.isArray(movieData?.results) ? movieData.results : [];
+          const tv = Array.isArray(tvData?.results) ? tvData.results : [];
+          const normalize = item => ({
+            id: item?.id ?? item?.tmdbId ?? '',
+            updatedAt: item?.updatedAt ?? '',
+            title: item?.title ?? '',
+            type: item?.type ?? item?.mediaType ?? ''
+          });
+          return JSON.stringify({
+            movies: movies.map(normalize).sort((a,b)=>String(a.id).localeCompare(String(b.id))),
+            tv: tv.map(normalize).sort((a,b)=>String(a.id).localeCompare(String(b.id)))
+          });
+        }
+
+        async function checkCatalog(){
+          if (document.visibilityState !== 'visible') return;
+          try {
+            const [movieRes, tvRes] = await Promise.all([
+              fetch(`${API_BASE}/catalog?live=${Date.now()}`, {cache:'no-store'}),
+              fetch(`${API_BASE}/tv-catalog?live=${Date.now()}`, {cache:'no-store'})
+            ]);
+            if (!movieRes.ok || !tvRes.ok) return;
+            const [movieData, tvData] = await Promise.all([movieRes.json(), tvRes.json()]);
+            const nextSignature = makeSignature(movieData, tvData);
+            const previousSignature = sessionStorage.getItem(SIGNATURE_KEY);
+
+            if (!previousSignature) {
+              sessionStorage.setItem(SIGNATURE_KEY, nextSignature);
+              return;
+            }
+
+            if (previousSignature !== nextSignature) {
+              sessionStorage.setItem(SIGNATURE_KEY, nextSignature);
+              window.location.reload();
+            }
+          } catch (_) {
+            // Keep the existing app working normally when the API is temporarily unavailable.
+          }
+        }
+
+        window.addEventListener('focus', checkCatalog);
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') checkCatalog();
+        });
+        window.setTimeout(checkCatalog, 2500);
+        window.setInterval(checkCatalog, POLL_MS);
+      })();
     </script>
   </head>
   <body>
