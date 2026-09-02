@@ -1,0 +1,1 @@
+Cine Universe frontend public assets live in this directory.
