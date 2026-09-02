@@ -9,6 +9,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+      /* Mobile-only layout adjustment: keep everything else unchanged. */
+      @media (max-width: 768px) {
+        .poster-row,
+        .poster-grid {
+          grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        }
+      }
+    </style>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
       // Isolated runtime API bridge.
