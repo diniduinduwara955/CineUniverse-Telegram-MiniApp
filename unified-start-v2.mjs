@@ -55,6 +55,39 @@ globalThis.fetch = async (input, init = {}) => {
   return originalFetch(input, init);
 };
 
+// This project uses long-polling getUpdates. If BotFather/another deployment
+// previously registered a webhook, Telegram will not deliver those updates to
+// getUpdates. Clear only the webhook configuration and keep pending updates.
+async function prepareTelegramPolling() {
+  const token = String(process.env.TELEGRAM_BOT_TOKEN || '').trim();
+  if (!token) {
+    console.warn('[unified-bootstrap] TELEGRAM_BOT_TOKEN missing; webhook check skipped.');
+    return;
+  }
+
+  try {
+    const infoRes = await originalFetch(`https://api.telegram.org/bot${token}/getWebhookInfo`);
+    const info = await infoRes.json();
+    const webhookUrl = String(info?.result?.url || '').trim();
+    if (webhookUrl) {
+      console.warn(`[unified-bootstrap] existing Telegram webhook detected: ${webhookUrl}`);
+      const deleteRes = await originalFetch(`https://api.telegram.org/bot${token}/deleteWebhook?drop_pending_updates=false`);
+      const deleted = await deleteRes.json();
+      if (!deleteRes.ok || !deleted.ok) {
+        console.error('[unified-bootstrap] failed to clear Telegram webhook:', deleted?.description || deleteRes.status);
+      } else {
+        console.log('[unified-bootstrap] Telegram webhook cleared; getUpdates polling enabled.');
+      }
+    } else {
+      console.log('[unified-bootstrap] Telegram webhook is already clear; getUpdates polling can run.');
+    }
+  } catch (err) {
+    console.error('[unified-bootstrap] Telegram webhook preparation failed:', err.message || err);
+  }
+}
+
+await prepareTelegramPolling();
+
 console.log(`[unified-bootstrap] starting existing backend on internal port ${BACKEND_PORT}`);
 
 const backend = spawn(process.execPath, ['server.js'], {
