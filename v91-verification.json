@@ -1,0 +1,15 @@
+{
+  "version": "V91",
+  "type": "additive-telegram-layout",
+  "preserved": [
+    "server/server.js",
+    "src/main.jsx",
+    "src/styles.css",
+    "catalog-json",
+    "V83-reliability"
+  ],
+  "default_ids": {
+    "update": "-1004336626745",
+    "group": "-5592309385"
+  }
+}

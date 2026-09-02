@@ -1,0 +1,7 @@
+{
+  "tv_branch": true,
+  "tv_label": true,
+  "tv_save": true,
+  "movie_branch": false,
+  "server_syntax": true
+}

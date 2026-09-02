@@ -1,0 +1,139 @@
+{
+  "version": 1,
+  "generatedAt": "2026-09-01T12:42:03.917Z",
+  "movies": [
+    {
+      "id": 119450,
+      "tmdbId": 119450,
+      "mediaType": "movie",
+      "type": "Movie",
+      "title": "Dawn of the Planet of the Apes",
+      "year": "2014",
+      "rating": "7.3",
+      "poster": "https://image.tmdb.org/t/p/w500/mSmAc9G25fhOHH45SLEeagR0qi7.jpg",
+      "backdrop": "https://image.tmdb.org/t/p/original/3SozaNPOYUadcmTPgndDibMyDNC.jpg",
+      "description": "A group of scientists in San Francisco struggle to stay alive in the aftermath of a plague that is wiping out humanity, while Caesar tries to maintain dominance over his community of intelligent apes.",
+      "genres": [
+        "Science Fiction",
+        "Action",
+        "Drama",
+        "Thriller"
+      ],
+      "originalLanguage": "en",
+      "runtime": "2h 10m",
+      "qualities": {
+        "1080P": {
+          "available": true,
+          "channel_chat_id": "-1004357597643",
+          "channel_message_id": 111,
+          "size": "2093719362",
+          "codec": "",
+          "audio": ""
+        },
+        "720P": {
+          "available": true,
+          "channel_chat_id": "-1004357597643",
+          "channel_message_id": 110,
+          "size": "917319522",
+          "codec": "",
+          "audio": ""
+        }
+      },
+      "updatedAt": "2026-08-25T06:05:07.305Z"
+    },
+    {
+      "id": 61791,
+      "tmdbId": 61791,
+      "mediaType": "movie",
+      "type": "Movie",
+      "title": "Rise of the Planet of the Apes",
+      "year": "2011",
+      "rating": "7.4",
+      "poster": "https://image.tmdb.org/t/p/w500/oqA45qMyyo1TtrnVEBKxqmTPhbN.jpg",
+      "backdrop": "https://image.tmdb.org/t/p/original/6cCF0KMUO2QmrVsQFujkQduREXX.jpg",
+      "description": "A highly intelligent chimpanzee named Caesar has been living a peaceful suburban life ever since he was born. But when he gets taken to a cruel primate facility, Caesar decides to revolt against those who have harmed him.",
+      "genres": [
+        "Thriller",
+        "Action",
+        "Drama",
+        "Science Fiction"
+      ],
+      "originalLanguage": "en",
+      "runtime": "1h 45m",
+      "qualities": {
+        "1080P": {
+          "available": true,
+          "channel_chat_id": "-1004357597643",
+          "channel_message_id": 109,
+          "size": "1340751872",
+          "codec": "",
+          "audio": ""
+        },
+        "720P": {
+          "available": true,
+          "channel_chat_id": "-1004357597643",
+          "channel_message_id": 108,
+          "size": "774627381",
+          "codec": "",
+          "audio": ""
+        }
+      },
+      "updatedAt": "2026-08-25T06:05:02.872Z"
+    },
+    {
+      "id": 22,
+      "tmdbId": 22,
+      "mediaType": "movie",
+      "type": "Movie",
+      "title": "Pirates of the Caribbean: The Curse of the Black Pearl",
+      "year": "2003",
+      "rating": "7.8",
+      "poster": "https://image.tmdb.org/t/p/w500/poHwCZeWzJCShH7tOjg8RIoyjcw.jpg",
+      "backdrop": "https://image.tmdb.org/t/p/original/uRNgkJSkNBFbbn9fPsEjDIy8Sh3.jpg",
+      "description": "When wily pirate Captain Barbossa seizes Jack Sparrow’s beloved ship, the Black Pearl, and kidnaps the governor’s daughter, Elizabeth Swann, blacksmith Will Turner reluctantly teams up with the unpredictable pirate Jack to rescue her—only to uncover a terrifying curse that turns Barbossa’s crew into the undead.",
+      "genres": [
+        "Adventure",
+        "Fantasy",
+        "Action"
+      ],
+      "originalLanguage": "en",
+      "runtime": "2h 23m",
+      "qualities": {},
+      "updatedAt": "2026-08-25T06:03:06.887Z"
+    }
+  ],
+  "tv": [
+    {
+      "id": 125988,
+      "type": "TV Series",
+      "title": "Silo",
+      "year": "2023",
+      "rating": "8.2",
+      "poster": "https://image.tmdb.org/t/p/w500/gMYZZvnkVNTqSVnVCphWbPXwWwb.jpg",
+      "backdrop": "https://image.tmdb.org/t/p/original/uTWhbLc7Bj4qNSdW3ZvZKL8cOHv.jpg",
+      "description": "In a ruined and toxic future, thousands live in a giant silo deep underground. After its sheriff breaks a cardinal rule and residents die mysteriously, engineer Juliette starts to uncover shocking secrets and the truth about the silo.",
+      "genres": [
+        "Sci-Fi & Fantasy",
+        "Drama"
+      ],
+      "cast": [
+        "Rebecca Ferguson",
+        "Common",
+        "Chinaza Uche",
+        "Ashley Zukerman",
+        "Shane McRae",
+        "Remmie Milner",
+        "Alexandria Riley",
+        "Reed Birney"
+      ],
+      "privateChannelUrl": "https://t.me/+DEu3uBe2Ddo5ODY1",
+      "lastEpisode": "",
+      "updatedAt": "2026-08-25T06:10:42.449Z",
+      "mediaType": "tv"
+    }
+  ],
+  "counts": {
+    "movies": 3,
+    "tv": 1
+  }
+}

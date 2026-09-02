@@ -1,0 +1,11 @@
+{
+  "root_cause": "Missing app.listen() in V28 server.js",
+  "server_syntax_ok": true,
+  "app_listen_count": 1,
+  "boot_output": "node:internal/modules/package_json_reader:256\n  throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);\n        ^\n\nError [ERR_MODULE_NOT_FOUND]: Cannot find package 'dotenv' imported from /mnt/data/CineUniverse-Telegram-MiniApp-API-V29/server/server.js\n\u001b[90m    at Object.getPackageJSONURL (node:internal/modules/package_json_reader:256:9)\u001b[39m\n\u001b[90m    at packageResolve (node:internal/modules/esm/resolve:768:81)\u001b[39m\n\u001b[90m    at moduleResolve (node:internal/modules/esm/resolve:854:18)\u001b[39m\n\u001b[90m    at defaultResolve (node:internal/modules/esm/resolve:984:11)\u001b[39m\n\u001b[90m    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:780:12)\u001b[39m\n\u001b[90m    at #cachedDefaultResolve (node:internal/modules/esm/loader:704:25)\u001b[39m\n\u001b[90m    at ModuleLoader.resolve (node:internal/modules/esm/loader:687:38)\u001b[39m\n\u001b[90m    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:305:38)\u001b[39m\n\u001b[90m    at ModuleJob._link (node:internal/modules/esm/module_job:137:49)",
+  "files_changed": [
+    "server/server.js",
+    "package.json",
+    "README.md"
+  ]
+}
