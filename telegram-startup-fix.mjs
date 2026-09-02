@@ -6,6 +6,34 @@ const ROOT = process.cwd();
 const serverDir = path.join(ROOT, 'server');
 await fs.mkdir(serverDir, { recursive: true });
 
+// Normalize Telegram reply_markup payloads before server.js sends them.
+// This keeps the existing server.js untouched while fixing accidentally nested
+// inline_keyboard objects used by some fallback paths.
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async (input, init = {}) => {
+  try {
+    if (typeof init?.body === 'string') {
+      const contentType = String(init?.headers?.['content-type'] || init?.headers?.['Content-Type'] || '').toLowerCase();
+      if (contentType.includes('application/json')) {
+        const body = JSON.parse(init.body);
+        const markup = body?.reply_markup;
+        if (Array.isArray(markup)) {
+          body.reply_markup = { inline_keyboard: markup };
+        } else if (markup && typeof markup === 'object' && markup.inline_keyboard && !Array.isArray(markup.inline_keyboard)) {
+          const nested = markup.inline_keyboard;
+          if (nested && typeof nested === 'object' && Array.isArray(nested.inline_keyboard)) {
+            body.reply_markup = { inline_keyboard: nested.inline_keyboard };
+          }
+        }
+        init = { ...init, body: JSON.stringify(body) };
+      }
+    }
+  } catch {
+    // Leave unrelated requests untouched.
+  }
+  return originalFetch(input, init);
+};
+
 async function copyIfMissing(sourceRelative, targetRelative) {
   const source = path.join(ROOT, sourceRelative);
   const target = path.join(ROOT, targetRelative);
@@ -40,7 +68,12 @@ async function prepareTelegramPolling() {
   const allowed = encodeURIComponent(JSON.stringify(['message', 'channel_post', 'callback_query']));
   const probeRes = await fetch(`${base}/getUpdates?timeout=0&allowed_updates=${allowed}`);
   const probe = await probeRes.json();
-  if (!probeRes.ok || !probe.ok) throw new Error(probe?.description || `getUpdates probe HTTP ${probeRes.status}`);
+  if (!probeRes.ok || !probe.ok) {
+    if (probeRes.status === 409) {
+      throw new Error('Telegram HTTP 409: another getUpdates consumer is active. Stop the previous Render service/instance using this bot token, then redeploy.');
+    }
+    throw new Error(probe?.description || `getUpdates probe HTTP ${probeRes.status}`);
+  }
   const count = Array.isArray(probe.result) ? probe.result.length : 0;
   console.log(`[telegram-startup-fix] getUpdates probe OK; pending updates returned=${count}`);
 }
