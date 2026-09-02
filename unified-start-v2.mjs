@@ -31,16 +31,36 @@ async function copyIfMissing(sourceRelative, targetRelative) {
   }
 }
 
-// Preserve the existing Render bootstrap behavior for the backend runtime files.
+async function ensureValidAsset(sourceRelative, targetRelative, minimumBytes = 1024) {
+  const source = path.join(ROOT, sourceRelative);
+  const target = path.join(ROOT, targetRelative);
+
+  try {
+    const stat = await fs.stat(target);
+    if (stat.isFile() && stat.size >= minimumBytes) return;
+  } catch {}
+
+  try {
+    const sourceStat = await fs.stat(source);
+    if (!sourceStat.isFile() || sourceStat.size < minimumBytes) {
+      console.warn(`[unified-bootstrap] asset source looks invalid: ${sourceRelative} (${sourceStat.size} bytes)`);
+      return;
+    }
+    await fs.copyFile(source, target);
+    console.log(`[unified-bootstrap] repaired asset ${sourceRelative} -> ${targetRelative} (${sourceStat.size} bytes)`);
+  } catch (err) {
+    console.warn(`[unified-bootstrap] asset repair skipped: ${sourceRelative}: ${err.message || err}`);
+  }
+}
+
 await copyIfMissing('published-catalog.json', 'server/published-catalog.json');
 await copyIfMissing('published-tv-catalog.json', 'server/published-tv-catalog.json');
 await copyIfMissing('tv-channel-map.json', 'server/tv-channel-map.json');
-await copyIfMissing('cine-universe-logo.jpg', 'public/cine-universe-logo.jpg');
+await ensureValidAsset('cine-universe-logo.jpg', 'public/cine-universe-logo.jpg', 1024);
 await ensureJsonFile('server/downloads.json', {});
 await ensureJsonFile('server/file-expiry-jobs.json', []);
 await ensureJsonFile('server/telegram-offset.json', { offset: Number(process.env.CHANNEL_UPDATE_OFFSET || 0) });
 
-// Preserve the existing Telegram JSON compatibility guard without editing server.js.
 const originalFetch = globalThis.fetch;
 globalThis.fetch = async (input, init = {}) => {
   if (init?.body && typeof init.body === 'string' && String(init.headers?.['content-type'] || init.headers?.['Content-Type'] || '').includes('application/json')) {
@@ -55,9 +75,6 @@ globalThis.fetch = async (input, init = {}) => {
   return originalFetch(input, init);
 };
 
-// This project uses long-polling getUpdates. If BotFather/another deployment
-// previously registered a webhook, Telegram will not deliver those updates to
-// getUpdates. Clear only the webhook configuration and keep pending updates.
 async function prepareTelegramPolling() {
   const token = String(process.env.TELEGRAM_BOT_TOKEN || '').trim();
   if (!token) {
@@ -103,8 +120,6 @@ backend.on('exit', (code, signal) => {
 
 const app = express();
 
-// Keep /api on the same public Render origin. This means the Mini App and API
-// share one deployment and existing server.js routes remain untouched.
 app.use('/api', express.raw({ type: '*/*', limit: '25mb' }));
 app.use('/api', async (req, res) => {
   try {
@@ -134,10 +149,8 @@ app.use('/api', async (req, res) => {
   }
 });
 
-// Serve the already-built Vite app from the same Render Web Service.
 app.use(express.static(distDir, { index: 'index.html' }));
 
-// Express 5 safe SPA fallback; intentionally avoids the old app.get('*') pattern.
 app.use(async (req, res, next) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
   if (req.path.startsWith('/api')) return next();
