@@ -34,12 +34,10 @@ async function copyIfMissing(sourceRelative, targetRelative) {
 async function ensureValidAsset(sourceRelative, targetRelative, minimumBytes = 1024) {
   const source = path.join(ROOT, sourceRelative);
   const target = path.join(ROOT, targetRelative);
-
   try {
     const stat = await fs.stat(target);
     if (stat.isFile() && stat.size >= minimumBytes) return;
   } catch {}
-
   try {
     const sourceStat = await fs.stat(source);
     if (!sourceStat.isFile() || sourceStat.size < minimumBytes) {
@@ -81,13 +79,12 @@ async function prepareTelegramPolling() {
     console.warn('[unified-bootstrap] TELEGRAM_BOT_TOKEN missing; webhook check skipped.');
     return;
   }
-
   try {
     const infoRes = await originalFetch(`https://api.telegram.org/bot${token}/getWebhookInfo`);
     const info = await infoRes.json();
     const webhookUrl = String(info?.result?.url || '').trim();
+    console.log(`[unified-bootstrap] webhook=${webhookUrl || '(none)'} pending=${Number(info?.result?.pending_update_count || 0)}`);
     if (webhookUrl) {
-      console.warn(`[unified-bootstrap] existing Telegram webhook detected: ${webhookUrl}`);
       const deleteRes = await originalFetch(`https://api.telegram.org/bot${token}/deleteWebhook?drop_pending_updates=false`);
       const deleted = await deleteRes.json();
       if (!deleteRes.ok || !deleted.ok) {
@@ -104,9 +101,9 @@ async function prepareTelegramPolling() {
 }
 
 await prepareTelegramPolling();
-
 console.log(`[unified-bootstrap] starting existing backend on internal port ${BACKEND_PORT}`);
 
+// Start only the existing server.js listener. This keeps exactly one Telegram getUpdates consumer.
 const backend = spawn(process.execPath, ['server.js'], {
   cwd: ROOT,
   env: { ...process.env, PORT: String(BACKEND_PORT) },
@@ -120,6 +117,7 @@ backend.on('exit', (code, signal) => {
 
 const app = express();
 
+// Keep /api on the same public Render origin.
 app.use('/api', express.raw({ type: '*/*', limit: '25mb' }));
 app.use('/api', async (req, res) => {
   try {
@@ -130,17 +128,13 @@ app.use('/api', async (req, res) => {
       if (lower === 'host' || lower === 'content-length' || lower === 'connection') continue;
       if (value !== undefined) headers[key] = Array.isArray(value) ? value.join(', ') : value;
     }
-
     const body = ['GET', 'HEAD'].includes(req.method) ? undefined : (req.body?.length ? req.body : undefined);
     const upstream = await fetch(target, { method: req.method, headers, body });
     const responseBuffer = Buffer.from(await upstream.arrayBuffer());
-
     res.status(upstream.status);
     upstream.headers.forEach((value, key) => {
       const lower = key.toLowerCase();
-      if (!['content-encoding', 'transfer-encoding', 'connection', 'content-length'].includes(lower)) {
-        res.setHeader(key, value);
-      }
+      if (!['content-encoding', 'transfer-encoding', 'connection', 'content-length'].includes(lower)) res.setHeader(key, value);
     });
     res.send(responseBuffer);
   } catch (err) {
@@ -150,7 +144,6 @@ app.use('/api', async (req, res) => {
 });
 
 app.use(express.static(distDir, { index: 'index.html' }));
-
 app.use(async (req, res, next) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
   if (req.path.startsWith('/api')) return next();
