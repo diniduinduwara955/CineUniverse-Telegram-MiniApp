@@ -11,6 +11,25 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
+      // Isolated runtime API bridge.
+      // Keeps existing React code unchanged and guarantees /api requests reach the Render API.
+      (function(){
+        const API_ORIGIN = 'https://cineuniverse-telegram-miniapp.onrender.com';
+        const originalFetch = window.fetch.bind(window);
+        window.fetch = function(input, init){
+          try {
+            const raw = typeof input === 'string' ? input : input?.url;
+            if (typeof raw === 'string' && raw.startsWith('/api')) {
+              const target = `${API_ORIGIN}${raw}`;
+              if (typeof input === 'string') return originalFetch(target, init);
+              const request = new Request(target, input);
+              return originalFetch(request, init);
+            }
+          } catch (_) {}
+          return originalFetch(input, init);
+        };
+      })();
+
       (function(){
         const logo = 'https://raw.githubusercontent.com/diniduinduwara955/CineUniverse-Telegram-MiniApp/main/cine-universe-logo.jpg';
         const apply = () => document.querySelectorAll('img[src="/cine-universe-logo.jpg"]').forEach(img => { img.src = logo; });
@@ -23,7 +42,7 @@
       // This is intentionally isolated in index.html so existing React logic remains untouched.
       (function(){
         const API_BASE = 'https://cineuniverse-telegram-miniapp.onrender.com/api';
-        const SIGNATURE_KEY = 'cine-live-catalog-signature';
+        const SIGNATURE_KEY = 'cine-live-catalog-signature-v2';
         const POLL_MS = 15000;
 
         function makeSignature(movieData, tvData){
