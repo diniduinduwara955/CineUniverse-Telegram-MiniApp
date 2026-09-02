@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import express from 'express';
+import { startSupabaseRuntimeSync } from './supabase-runtime-sync.mjs';
 
 const ROOT = process.cwd();
 const serverDir = path.join(ROOT, 'server');
@@ -101,23 +102,20 @@ async function prepareTelegramPolling() {
 }
 
 await prepareTelegramPolling();
+await startSupabaseRuntimeSync();
 console.log(`[unified-bootstrap] starting existing backend on internal port ${BACKEND_PORT}`);
 
-// Start only the existing server.js listener. This keeps exactly one Telegram getUpdates consumer.
 const backend = spawn(process.execPath, ['server.js'], {
   cwd: ROOT,
   env: { ...process.env, PORT: String(BACKEND_PORT) },
   stdio: ['inherit', 'inherit', 'inherit']
 });
-
 backend.on('exit', (code, signal) => {
   console.error(`[unified-backend] exited code=${code} signal=${signal || 'none'}`);
   process.exit(code ?? 1);
 });
 
 const app = express();
-
-// Keep /api on the same public Render origin.
 app.use('/api', express.raw({ type: '*/*', limit: '25mb' }));
 app.use('/api', async (req, res) => {
   try {
