@@ -57,19 +57,14 @@ async function injectUiEnhancements() {
   const indexFile = path.join(distDir, 'index.html');
   try {
     let html = await fs.readFile(indexFile, 'utf8');
-    let changed = false;
-    if (!html.includes('cine-ui-enhancements-v1.css')) {
-      html = html.replace('</head>', '  <link rel="stylesheet" href="/cine-ui-enhancements-v1.css">\n</head>');
-      changed = true;
-    }
-    if (!html.includes('cine-ui-enhancements-v1.js')) {
-      html = html.replace('</body>', '  <script defer src="/cine-ui-enhancements-v1.js"></script>\n</body>');
-      changed = true;
-    }
-    if (changed) {
-      await fs.writeFile(indexFile, html, 'utf8');
-      console.log('[unified-bootstrap] additive UI enhancements injected');
-    }
+    html = html.replace(/\s*<link[^>]+cine-ui-enhancements-v1\.css[^>]*>/g, '');
+    html = html.replace(/\s*<script[^>]+cine-ui-enhancements-v1\.js[^>]*><\/script>/g, '');
+    html = html.replace(/\s*<link[^>]+cine-ui-enhancements-v2\.css[^>]*>/g, '');
+    html = html.replace(/\s*<script[^>]+cine-ui-enhancements-v2\.js[^>]*><\/script>/g, '');
+    html = html.replace('</head>', '  <link rel="stylesheet" href="/cine-ui-enhancements-v2.css">\n</head>');
+    html = html.replace('</body>', '  <script defer src="/cine-ui-enhancements-v2.js"></script>\n</body>');
+    await fs.writeFile(indexFile, html, 'utf8');
+    console.log('[unified-bootstrap] additive UI enhancements v2 loaded');
   } catch (err) {
     console.warn('[unified-bootstrap] UI enhancement injection skipped:', err.message || err);
   }
