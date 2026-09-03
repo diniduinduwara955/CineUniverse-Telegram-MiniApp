@@ -41,7 +41,7 @@
 .cu-admin-stats-label{grid-column:1/-1;font-size:13px;font-weight:900;color:#fff}
 
 @media (max-width:720px){
-  .poster-row,.poster-grid{grid-template-columns:repeat(6,minmax(0,1fr)) !important;gap:7px !important}
+  .poster-row,.poster-grid{grid-template-columns:repeat(5,minmax(0,1fr)) !important;gap:7px !important}
   .cu-search-panel{margin:10px 0 14px;padding:10px;border-radius:15px}
   .cu-search-results{grid-template-columns:1fr;gap:7px}
   .cu-result-poster{flex-basis:42px;width:42px;height:61px}
