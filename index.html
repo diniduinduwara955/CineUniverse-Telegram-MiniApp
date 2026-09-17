@@ -2,112 +2,18 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#05060a" />
-    <meta name="description" content="Cine Universe — premium cinematic Telegram Mini App" />
+    <meta name="description" content="Cine Universe — cinematic Telegram Mini App" />
+    <meta name="color-scheme" content="dark" />
     <title>Cine Universe</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-      /* Mobile-only layout adjustment: keep everything else unchanged. */
-      @media (max-width: 768px) {
-        .poster-row,
-        .poster-grid {
-          grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-        }
-      }
-    </style>
-    <link rel="stylesheet" href="/cine-ui-enhancements-v1.css?v=2">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script>
-      // Isolated runtime API bridge.
-      // Keeps existing React code unchanged and guarantees /api requests reach the Render API.
-      (function(){
-        const API_ORIGIN = 'https://cineuniverse-telegram-miniapp.onrender.com';
-        const originalFetch = window.fetch.bind(window);
-        window.fetch = function(input, init){
-          try {
-            const raw = typeof input === 'string' ? input : input?.url;
-            if (typeof raw === 'string' && raw.startsWith('/api')) {
-              const target = `${API_ORIGIN}${raw}`;
-              if (typeof input === 'string') return originalFetch(target, init);
-              const request = new Request(target, input);
-              return originalFetch(request, init);
-            }
-          } catch (_) {}
-          return originalFetch(input, init);
-        };
-      })();
-
-      (function(){
-        const logo = 'https://raw.githubusercontent.com/diniduinduwara955/CineUniverse-Telegram-MiniApp/main/cine-universe-logo.jpg';
-        const apply = () => document.querySelectorAll('img[src="/cine-universe-logo.jpg"]').forEach(img => { img.src = logo; });
-        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply);
-        else apply();
-        new MutationObserver(apply).observe(document.documentElement, {childList:true, subtree:true, attributes:true, attributeFilter:['src']});
-      })();
-
-      // Live Telegram catalog refresh layer.
-      // This is intentionally isolated in index.html so existing React logic remains untouched.
-      (function(){
-        const API_BASE = 'https://cineuniverse-telegram-miniapp.onrender.com/api';
-        const SIGNATURE_KEY = 'cine-live-catalog-signature-v2';
-        const POLL_MS = 15000;
-
-        function makeSignature(movieData, tvData){
-          const movies = Array.isArray(movieData?.results) ? movieData.results : [];
-          const tv = Array.isArray(tvData?.results) ? tvData.results : [];
-          const normalize = item => ({
-            id: item?.id ?? item?.tmdbId ?? '',
-            updatedAt: item?.updatedAt ?? '',
-            title: item?.title ?? '',
-            type: item?.type ?? item?.mediaType ?? ''
-          });
-          return JSON.stringify({
-            movies: movies.map(normalize).sort((a,b)=>String(a.id).localeCompare(String(b.id))),
-            tv: tv.map(normalize).sort((a,b)=>String(a.id).localeCompare(String(b.id)))
-          });
-        }
-
-        async function checkCatalog(){
-          if (document.visibilityState !== 'visible') return;
-          try {
-            const [movieRes, tvRes] = await Promise.all([
-              fetch(`${API_BASE}/catalog?live=${Date.now()}`, {cache:'no-store'}),
-              fetch(`${API_BASE}/tv-catalog?live=${Date.now()}`, {cache:'no-store'})
-            ]);
-            if (!movieRes.ok || !tvRes.ok) return;
-            const [movieData, tvData] = await Promise.all([movieRes.json(), tvRes.json()]);
-            const nextSignature = makeSignature(movieData, tvData);
-            const previousSignature = sessionStorage.getItem(SIGNATURE_KEY);
-
-            if (!previousSignature) {
-              sessionStorage.setItem(SIGNATURE_KEY, nextSignature);
-              return;
-            }
-
-            if (previousSignature !== nextSignature) {
-              sessionStorage.setItem(SIGNATURE_KEY, nextSignature);
-              window.location.reload();
-            }
-          } catch (_) {
-            // Keep the existing app working normally when the API is temporarily unavailable.
-          }
-        }
-
-        window.addEventListener('focus', checkCatalog);
-        document.addEventListener('visibilitychange', () => {
-          if (document.visibilityState === 'visible') checkCatalog();
-        });
-        window.setTimeout(checkCatalog, 2500);
-        window.setInterval(checkCatalog, POLL_MS);
-      })();
-    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/main.jsx"></script>
-    <script src="/cine-ui-enhancements-v1.js?v=2" defer></script>
   </body>
 </html>
