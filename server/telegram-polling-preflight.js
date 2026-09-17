@@ -159,11 +159,6 @@ export async function prepareTelegramPolling() {
       console.log('[telegram-preflight] No webhook configured; polling mode is ready.');
     }
 
-    // Render can briefly overlap the previous instance and the new instance
-    // during a deploy. Telegram allows only one active getUpdates consumer for
-    // a bot token, so give the previous instance time to shut down before the
-    // new polling listener starts. This targets HTTP 409 only and leaves the
-    // existing bot/group workflow unchanged.
     if (POLL_START_DELAY_MS > 0) {
       console.log(`[telegram-preflight] Waiting ${Math.round(POLL_START_DELAY_MS / 1000)}s before starting polling to avoid Telegram 409 overlap.`);
       await new Promise(resolve => setTimeout(resolve, POLL_START_DELAY_MS));
@@ -172,8 +167,6 @@ export async function prepareTelegramPolling() {
     installWelcomeStartPatch();
     console.log('[telegram-preflight] /start cinematic welcome patch ready.');
   } catch (error) {
-    // Do not prevent the existing Cine Universe server from starting if Telegram
-    // is temporarily unreachable. The original bot logic remains untouched.
     console.warn('[telegram-preflight] Check skipped:', error.message || error);
     installWelcomeStartPatch();
   }
