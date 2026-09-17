@@ -133,7 +133,7 @@ globalThis.fetch = async function(input, init = {}) {
           '',
           '💙 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀',
           '© 2026 Cine Universe'
-        ].join('\\n');
+        ].join('\n');
         payload.reply_markup = {
           inline_keyboard: [[
             {
