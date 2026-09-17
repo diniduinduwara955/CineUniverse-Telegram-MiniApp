@@ -10,6 +10,7 @@ const REFRESH_MS = Number(process.env.LIVE_CONTENT_REFRESH_MS || 15000);
 const MESSAGE_FILE = path.join(process.cwd(), 'server', 'live-content-message.json');
 const MOVIE_FILE = path.join(process.cwd(), 'server', 'published-catalog.json');
 const TV_FILE = path.join(process.cwd(), 'server', 'published-tv-catalog.json');
+const LIVE_MARKER = '𝗟𝗜𝗩𝗘 𝗖𝗢𝗡𝗧𝗘𝗡𝗧 𝗗𝗔𝗧𝗔𝗕𝗔𝗦𝗘';
 const INDIAN_LANGUAGES = new Set(['hi','ta','te','ml','kn','bn','mr','gu','pa','ur','or','as']);
 
 async function readJson(file) {
@@ -19,21 +20,40 @@ function items(value) { return Array.isArray(value) ? value : (value && typeof v
 async function readLocal(file) { return items(await readJson(file)); }
 
 async function readRuntimeState(key) {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return [];
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
   try {
     const url = `${SUPABASE_URL}/rest/v1/cine_runtime_state?key=eq.${encodeURIComponent(key)}&select=payload&limit=1`;
     const res = await fetch(url, { headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` } });
     if (!res.ok) throw new Error(`Supabase HTTP ${res.status}`);
     const rows = await res.json();
-    return items(rows?.[0]?.payload);
+    return rows?.[0]?.payload ?? null;
   } catch (err) {
     console.warn(`[live-content] Supabase ${key} read failed:`, err.message || err);
-    return [];
+    return null;
+  }
+}
+async function saveRuntimeState(key, payload) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return;
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/cine_runtime_state?on_conflict=key`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'content-type': 'application/json',
+        Prefer: 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify({ key, payload })
+    });
+    if (!res.ok) throw new Error(`Supabase HTTP ${res.status}`);
+  } catch (err) {
+    console.warn(`[live-content] Supabase ${key} write failed:`, err.message || err);
   }
 }
 async function loadCatalog(remoteKey, localFile) {
   const remote = await readRuntimeState(remoteKey);
-  return remote.length > 0 ? remote : readLocal(localFile);
+  return Array.isArray(remote) && remote.length > 0 ? remote : readLocal(localFile);
 }
 
 function text(v) { return String(v ?? '').trim().toLowerCase(); }
@@ -121,7 +141,7 @@ Your next movie is waiting... 🍿
 ━━━━━━━━━━━━━━━━━━━━
 
 © 𝟮𝟬𝟮𝟲 𝗖𝗶𝗻𝗲 𝗨𝗻𝗶𝘃𝗲𝗿𝘀𝗲™
-𝗔𝗹𝗹 𝗥𝗶𝗴𝗵𝘁𝘀 𝗥𝗲𝗦𝗘𝗥𝗩𝗘𝗗.`;
+𝗔𝗹𝗹 𝗥𝗶𝗴𝗵𝘁𝘀 𝗥𝗲𝘀𝗲𝗿𝘃𝗘𝗗.`;
 }
 async function telegram(method, payload) {
   if (!BOT_TOKEN) throw new Error('TELEGRAM_BOT_TOKEN is not configured.');
@@ -130,26 +150,68 @@ async function telegram(method, payload) {
   if (!res.ok || !data.ok) throw new Error(data?.description || `Telegram HTTP ${res.status}`);
   return data.result;
 }
-async function messageId() { const data = await readJson(MESSAGE_FILE); return Number(data?.message_id) || null; }
-async function saveMessageId(id) { await fs.writeFile(MESSAGE_FILE, JSON.stringify({message_id:Number(id)}, null, 2), 'utf8'); }
+async function messageId() {
+  const local = await readJson(MESSAGE_FILE);
+  if (Number(local?.message_id)) return { messageId:Number(local.message_id), chatId:String(local.chat_id || LIVE_CHANNEL_ID) };
+  const remote = await readRuntimeState('liveContentMessage');
+  if (remote && Number(remote.message_id)) return { messageId:Number(remote.message_id), chatId:String(remote.chat_id || LIVE_CHANNEL_ID) };
+  return null;
+}
+async function saveMessageId(chatId, id) {
+  const payload = { chat_id:String(chatId), message_id:Number(id), updated_at:new Date().toISOString() };
+  await fs.writeFile(MESSAGE_FILE, JSON.stringify(payload, null, 2), 'utf8');
+  await saveRuntimeState('liveContentMessage', payload);
+}
+async function getPinnedLiveMessage() {
+  try {
+    const chat = await telegram('getChat', { chat_id: LIVE_CHANNEL_ID });
+    const pinned = chat?.pinned_message;
+    const body = String(pinned?.text || pinned?.caption || '');
+    if (body.includes(LIVE_MARKER) && Number(pinned?.message_id)) {
+      return { chatId:String(LIVE_CHANNEL_ID), messageId:Number(pinned.message_id), kind:pinned?.caption ? 'caption' : 'text' };
+    }
+  } catch (err) {
+    console.warn('[live-content] pinned message lookup failed:', err.message || err);
+  }
+  return null;
+}
 async function refresh() {
   if (!BOT_TOKEN || !LIVE_CHANNEL_ID) return;
-  const movies = await loadCatalog('movieCatalog', MOVIE_FILE);
-  const series = await loadCatalog('tvCatalog', TV_FILE);
+  const [movies, series] = await Promise.all([loadCatalog('movieCatalog', MOVIE_FILE), loadCatalog('tvCatalog', TV_FILE)]);
   const c = counts(movies, series);
   const message = buildMessage(c, lastUpdated(movies, series));
-  let id = await messageId();
   console.log(`[live-content] Database counts: movies=${c.movies}, series=${c.series}, total=${c.total}`);
-  if (id) {
-    try { await telegram('editMessageText', {chat_id:LIVE_CHANNEL_ID,message_id:id,text:message,parse_mode:'HTML'}); return; }
-    catch (err) {
-      if (/message is not modified/i.test(String(err?.message || err))) return;
-      console.warn('[live-content] Existing message edit failed; creating a replacement:', err.message || err);
-      id = null;
+
+  const saved = await messageId();
+  const pinned = await getPinnedLiveMessage();
+  const candidates = [];
+  if (saved) candidates.push({ ...saved, kind:'text', source:'saved' });
+  if (pinned && (!saved || pinned.messageId !== saved.messageId)) candidates.push({ ...pinned, source:'pinned' });
+
+  for (const candidate of candidates) {
+    try {
+      const method = candidate.kind === 'caption' ? 'editMessageCaption' : 'editMessageText';
+      const payload = { chat_id:candidate.chatId, message_id:candidate.messageId, parse_mode:'HTML', disable_web_page_preview:true };
+      if (candidate.kind === 'caption') payload.caption = message;
+      else payload.text = message;
+      await telegram(method, payload);
+      await saveMessageId(candidate.chatId, candidate.messageId);
+      if (candidate.source === 'pinned') console.log(`[live-content] adopted existing pinned live database message: ${candidate.messageId}`);
+      else console.log(`[live-content] updated existing live content message: ${candidate.messageId}`);
+      return;
+    } catch (err) {
+      if (/message is not modified/i.test(String(err?.message || err))) {
+        await saveMessageId(candidate.chatId, candidate.messageId);
+        return;
+      }
+      console.warn(`[live-content] edit failed for ${candidate.messageId}:`, err.message || err);
     }
   }
-  const sent = await telegram('sendMessage', {chat_id:LIVE_CHANNEL_ID,text:message,parse_mode:'HTML'});
-  await saveMessageId(sent.message_id);
+
+  const sent = await telegram('sendMessage', {chat_id:LIVE_CHANNEL_ID,text:message,parse_mode:'HTML',disable_web_page_preview:true});
+  await saveMessageId(LIVE_CHANNEL_ID, sent.message_id);
+  try { await telegram('pinChatMessage', {chat_id:LIVE_CHANNEL_ID,message_id:sent.message_id,disable_notification:true}); }
+  catch (err) { console.warn('[live-content] pin failed:', err.message || err); }
   console.log(`[live-content] Live database message created: ${sent.message_id}`);
 }
 export function startLiveContentDatabase() {
