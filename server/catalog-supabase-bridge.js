@@ -113,9 +113,6 @@ fs.readFile = async function(file, options) {
   const isTv = target === path.resolve(TV_CATALOG_FILE);
   const isDownloads = target === path.resolve(DOWNLOADS_FILE);
 
-  // Keep the existing local-file-first behavior for downloads. In production,
-  // the repository does not contain downloads.json, so the Supabase runtime
-  // map becomes the fallback source for the group quality buttons.
   if (isDownloads) {
     try {
       const local = await originalReadFile(file, options);
@@ -152,9 +149,6 @@ fs.readFile = async function(file, options) {
   return originalReadFile(file, options);
 };
 
-// Preserve the existing local downloads.json write, then persist the complete
-// map to Supabase. Existing entries are kept unchanged because the map is
-// written as a whole after the server has merged the new quality record.
 fs.writeFile = async function(file, data, options) {
   const result = await originalWriteFile(file, data, options);
   const target = path.resolve(String(file));
@@ -174,59 +168,14 @@ fs.writeFile = async function(file, data, options) {
   return result;
 };
 
-// Future FILE NOTICE messages only: keep all existing Telegram messages intact,
-// but replace the old notice payload with the new cinematic notice and channel button.
 globalThis.fetch = async function(input, init = {}) {
   try {
     const url = String(typeof input === 'string' ? input : input?.url || '');
     const method = String(init?.method || (typeof input !== 'string' ? input?.method || 'GET' : 'GET')).toUpperCase();
     const body = init?.body;
 
-    // Handle private /start updates here and remove only those updates from the
-    // normal polling result. This makes the welcome delivery independent of the
-    // legacy server welcome implementation while leaving all other updates intact.
-    if (method === 'GET' && /\/getUpdates(?:\?|$)/.test(url)) {
-      const response = await originalFetch(input, init);
-      if (!response.ok) return response;
-
-      const data = await response.clone().json();
-      const results = Array.isArray(data?.result) ? data.result : [];
-      const remaining = [];
-      let handledWelcome = 0;
-
-      for (const update of results) {
-        const message = update?.message;
-        const text = String(message?.text || '').trim();
-        const isBotStart = message?.chat?.type === 'private' && /^\/start(?:@\w+)?(?:\s+.*)?$/i.test(text);
-
-        if (!isBotStart) {
-          remaining.push(update);
-          continue;
-        }
-
-        try {
-          await sendBotWelcomeDirect(message);
-          handledWelcome += 1;
-        } catch (error) {
-          // Keep the original update so the legacy sendBotWelcome path can retry/fallback.
-          remaining.push(update);
-          console.warn('[catalog-bridge] direct bot welcome failed; keeping /start update:', error.message || error);
-        }
-      }
-
-      if (handledWelcome > 0) {
-        console.log(`[catalog-bridge] private bot welcome delivered: ${handledWelcome}`);
-      }
-      return new Response(JSON.stringify({ ...data, result: remaining }), {
-        status: response.status,
-        statusText: response.statusText,
-        headers: response.headers
-      });
-    }
-
     if (method === 'POST' && /\/sendPhoto(?:\?|$)/.test(url) && body && typeof body.get === 'function' && typeof body.set === 'function') {
       const oldCaption = String(body.get('caption') || '');
-
       if (oldCaption.includes('Cine Universe Bot වෙත සාදරයෙන් පිළිගනිමු!')) {
         const mentionMatch = oldCaption.match(/👋 ආයුබෝවන් (.+?)! ❤️/s);
         const mention = mentionMatch?.[1] ? mentionMatch[1] : '<b>Friend</b>';
@@ -242,7 +191,6 @@ globalThis.fetch = async function(input, init = {}) {
     if (method === 'POST' && /\/sendMessage(?:\?|$)/.test(url) && typeof body === 'string') {
       const payload = JSON.parse(body);
       const oldNotice = String(payload?.text || '');
-
       if (oldNotice.includes('<b>FILE NOTICE</b>') || oldNotice.includes('ඔයාට ලැබුණු Movie file එක තාවකාලිකයි')) {
         payload.text = [
           '🚨 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀 𝘼𝙇𝙀𝙍𝙏',
@@ -263,17 +211,13 @@ globalThis.fetch = async function(input, init = {}) {
         ].join('\n');
         payload.reply_markup = {
           inline_keyboard: [[
-            {
-              text: '🔥𝐂𝐢𝐧𝐞 𝐔𝐧𝐢𝐯𝐞𝐫𝐬𝐞 | 𝐄𝐧𝐭𝐞𝐫𝐭𝐚𝐢𝐧𝐦𝐞𝐧𝐭 𝐇𝐮𝐛',
-              url: 'https://t.me/+xXNo5N_k9aIxMTU9'
-            }
+            { text: '🔥𝐂𝐢𝐧𝐞 𝐔𝐧𝐢𝐯𝐞𝐫𝐬𝐞 | 𝐄𝐧𝐭𝐞𝐫𝐭𝐚𝐢𝐧𝐦𝐞𝐧𝐭 𝐇𝐮𝐛', url: 'https://t.me/+xXNo5N_k9aIxMTU9' }
           ]]
         };
         return originalFetch(input, { ...init, body: JSON.stringify(payload) });
       }
     }
   } catch (error) {
-    // Never let notice/welcome styling interfere with normal Telegram/Supabase traffic.
     console.warn('[catalog-bridge] Telegram message rewrite skipped:', error.message || error);
   }
 
