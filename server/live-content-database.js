@@ -89,59 +89,46 @@ function lastUpdated(movies, series) {
   return dates.length ? new Date(Math.max(...dates.map(x => x.getTime()))) : new Date();
 }
 function formatUpdated(date) {
-  return new Intl.DateTimeFormat('en-LK', { timeZone:'Asia/Colombo', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }).format(date).replace(',', '');
+  return new Intl.DateTimeFormat('en-LK', { timeZone:'Asia/Colombo', year:'numeric', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }).format(date);
 }
 function buildMessage(c, updated) {
   return `🎬 𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘™
 ━━━━━━━━━━━━━━━━━━━━
+${LIVE_MARKER}
 
-📊 𝗟𝗜𝗩𝗘 𝗖𝗢𝗡𝗧𝗘𝗡𝗧 𝗗𝗔𝗧𝗔𝗕𝗔𝗦𝗘
+🟢 <b>SYSTEM STATUS</b>
+<b>ONLINE</b> • AUTO SYNC ACTIVE
 
-🎬 𝗠𝗢𝗩𝗜𝗘𝗦
-└─ 🎞 ${c.movies} Titles
-
-📺 𝗧𝗩 𝗦𝗘𝗥𝗜𝗘𝗦
-└─ 📺 ${c.series} Titles
-
-🇮🇳 𝗜𝗡𝗗𝗜𝗔𝗡
-└─ 🎥 ${c.indian} Titles
-
-🇰🇷 𝗞𝗢𝗥𝗘𝗔𝗡
-└─ 🎬 ${c.korean} Titles
-
-🎨 𝗔𝗡𝗜𝗠𝗔𝗧𝗜𝗢𝗡
-└─ ✨ ${c.animation} Titles
-
-🍥 𝗔𝗡𝗜𝗠𝗘
-└─ ⚡ ${c.anime} Titles
-
+📚 <b>LIBRARY OVERVIEW</b>
+🎞️ Movies      <b>${c.movies}</b>
+📺 TV Series   <b>${c.series}</b>
 ━━━━━━━━━━━━━━━━━━━━
+💎 TOTAL        <b>${c.total}</b> TITLES
 
-💎 𝗧𝗢𝗧𝗔𝗟 𝗖𝗢𝗡𝗧𝗘𝗡𝗧
-🎬 ${c.total} Titles
+🌍 <b>COLLECTIONS</b>
+🇮🇳 Indian       <b>${c.indian}</b>
+🇰🇷 Korean       <b>${c.korean}</b>
+🎨 Animation     <b>${c.animation}</b>
+🍥 Anime         <b>${c.anime}</b>
 
-🟢 𝗗𝗔𝗧𝗔𝗕𝗔𝗦𝗘
-𝗟𝗜𝗩𝗘 • 𝗔𝗖𝗧𝗜𝗩𝗘 • 𝗨𝗣𝗗𝗔𝗧𝗜𝗡𝗚
+📡 <b>CONTENT FLOW</b>
+Telegram → Catalog → Mini App
 
-🕐 𝗟𝗔𝗦𝗧 𝗨𝗣𝗗𝗔𝗧𝗘𝗗
+🕐 <b>LAST SYNC</b>
 ${formatUpdated(updated)}
 
-━━━━━━━━━━━━━━━━━━━━
+🔄 <b>DATABASE MODE</b>
+LIVE • PERSISTENT • AUTOMATIC
 
-🚀 𝗡𝗘𝗪 𝗖𝗢𝗡𝗧𝗘𝗡𝗧
-𝗔𝗗𝗗𝗘𝗗 𝗥𝗘𝗚𝗨𝗟𝗔𝗥𝗟𝗬
-
-🎬 Movies • 📺 Series
-🇮🇳 Indian • 🇰🇷 Korean
-🎨 Animation • 🍥 Anime
-
-❤️ 𝗦𝗧𝗔𝗬 𝗧𝗨𝗡𝗘𝗗
-Your next movie is waiting... 🍿
+✨ New content appears here automatically.
+📌 This message is updated in place.
 
 ━━━━━━━━━━━━━━━━━━━━
 
-© 𝟮𝟬𝟮𝟲 𝗖𝗶𝗻𝗲 𝗨𝗻𝗶𝘃𝗲𝗿𝘀𝗲™
-𝗔𝗹𝗹 𝗥𝗶𝗴𝗵𝘁𝘀 𝗥𝗲𝘀𝗲𝗿𝘃𝗘𝗗.`;
+🍿 <b>CINE UNIVERSE OFFICIAL</b>
+Your cinematic library, always moving.
+
+© 2026 <b>Cine Universe™</b>. All Rights Reserved.`;
 }
 async function telegram(method, payload) {
   if (!BOT_TOKEN) throw new Error('TELEGRAM_BOT_TOKEN is not configured.');
