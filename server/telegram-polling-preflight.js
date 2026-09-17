@@ -59,7 +59,7 @@ async function sendCineUniverseWelcome(message, originalFetch) {
     '💙 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀',
     '𝑪𝒓𝒆𝒂𝒕𝒆𝒅 𝒃𝒚 𝐃𝐢𝐧𝐢𝐝𝐮 𝐈𝐧𝐝𝐮𝐰𝐚𝐫𝐚',
     '',
-    '© 2026 𝘾𝙞𝙣𝙚 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀'
+    '© 2026 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀'
   ].join('\n');
 
   const keyboard = {
@@ -172,8 +172,6 @@ export async function prepareTelegramPolling() {
     installWelcomeStartPatch();
     console.log('[telegram-preflight] /start cinematic welcome patch ready.');
   } catch (error) {
-    // Do not prevent the existing Cine Universe server from starting if Telegram
-    // is temporarily unreachable. The original bot logic remains untouched.
     console.warn('[telegram-preflight] Check skipped:', error.message || error);
     installWelcomeStartPatch();
   }
