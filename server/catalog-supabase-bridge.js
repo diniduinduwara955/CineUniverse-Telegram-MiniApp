@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 const originalReadFile = fs.readFile.bind(fs);
+const originalWriteFile = fs.writeFile.bind(fs);
 const CATALOG_FILE = path.join(process.cwd(), 'server', 'published-catalog.json');
 const TV_CATALOG_FILE = path.join(process.cwd(), 'server', 'published-tv-catalog.json');
 const DOWNLOADS_FILE = path.join(process.cwd(), 'server', 'downloads.json');
@@ -17,6 +18,22 @@ async function fetchRuntimeCatalog(key) {
   if (!response.ok) throw new Error(`Supabase ${key} HTTP ${response.status}`);
   const rows = await response.json();
   return rows?.[0]?.payload ?? null;
+}
+
+async function saveRuntimeCatalog(key, payload) {
+  if (!SUPABASE_URL || !SUPABASE_KEY) return;
+  const url = `${SUPABASE_URL}/rest/v1/cine_runtime_state?on_conflict=key`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      'content-type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=minimal',
+    },
+    body: JSON.stringify({ key, payload }),
+  });
+  if (!response.ok) throw new Error(`Supabase ${key} HTTP ${response.status}`);
 }
 
 fs.readFile = async function(file, options) {
@@ -64,4 +81,26 @@ fs.readFile = async function(file, options) {
   return originalReadFile(file, options);
 };
 
-console.log('[catalog-bridge] Supabase catalog + downloads bridge loaded; local writes remain enabled.');
+// Preserve the existing local downloads.json write, then persist the complete
+// map to Supabase. Existing entries are kept unchanged because the map is
+// written as a whole after the server has merged the new quality record.
+fs.writeFile = async function(file, data, options) {
+  const result = await originalWriteFile(file, data, options);
+  const target = path.resolve(String(file));
+  if (target !== path.resolve(DOWNLOADS_FILE)) return result;
+
+  try {
+    const localText = typeof data === 'string' ? data : Buffer.from(data).toString('utf8');
+    const localMap = JSON.parse(localText);
+    if (localMap && typeof localMap === 'object' && Object.keys(localMap).length > 0) {
+      await saveRuntimeCatalog('downloads', localMap);
+      console.log(`[catalog-bridge] Downloads synced to Supabase: ${Object.keys(localMap).length} records.`);
+    }
+  } catch (error) {
+    console.warn('[catalog-bridge] Supabase downloads sync failed; local write kept:', error.message || error);
+  }
+
+  return result;
+};
+
+console.log('[catalog-bridge] Supabase catalog + downloads bridge loaded; local writes + new download sync enabled.');
