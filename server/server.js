@@ -1,6 +1,7 @@
 // Cine Universe server bridge
-// Keeps the existing root server.js untouched while preparing Telegram polling
-// and loading the isolated Live Content Database plugin.
+// Loads the Supabase catalog bridge before the existing backend so runtime
+// movie/TV catalogs are read from Supabase without changing the core server logic.
+await import('./catalog-supabase-bridge.js');
 await import('./telegram-polling-preflight.js');
 await import('../server.js');
 await import('./live-content-database.js');
