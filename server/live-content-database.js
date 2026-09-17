@@ -109,60 +109,37 @@ function formatUpdated(date) {
   return new Intl.DateTimeFormat('en-LK', { timeZone:'Asia/Colombo', year:'numeric', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }).format(date);
 }
 function buildMessage(c, updated) {
-  return `🎬 𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘™
+  return `🎬 <b>CINE UNIVERSE™</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        ${LIVE_MARKER}
-      𝗟𝗜𝗩𝗘 • 𝗔𝗨𝗧𝗢 𝗦𝗬𝗡𝗖 • 𝗔𝗖𝗧𝗜𝗩𝗘
+        <b>${LIVE_MARKER}</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🟢 ONLINE  •  ⚡ AUTO SYNC  •  🔄 REAL-TIME
 
-🟢 <b>SYSTEM STATUS</b>
-🟢 ONLINE        ⚡ AUTO SYNC        🔄 REAL-TIME
-📡 TELEGRAM     🗂️ CATALOG          🌐 MINI APP
+📚 <b>LIBRARY</b>
+🎞️ Movies: <b>${c.movies}</b>  |  📺 TV Series: <b>${c.series}</b>  |  💎 Total: <b>${c.total}</b>
+📥 Downloads: <b>ACTIVE</b>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📚 <b>LIBRARY OVERVIEW</b>
-🎞️ Movies: <b>${c.movies}</b>      📺 TV Series: <b>${c.series}</b>
-💎 Total Titles: <b>${c.total}</b>  📥 Downloads: <b>ACTIVE</b>
+🌍 <b>COLLECTIONS</b>
+🇱🇰 Sri Lanka: <b>${c.sriLanka}</b>  |  🇮🇳 India: <b>${c.indian}</b>  |  🇰🇷 Korea: <b>${c.korean}</b>
+🇺🇸 USA: <b>${c.usa}</b>  |  🇯🇵 Japan: <b>${c.japan}</b>  |  🇨🇳 China: <b>${c.china}</b>  |  🇬🇧 UK: <b>${c.uk}</b>
+🌎 Worldwide Library
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🌍 <b>COUNTRY &amp; COLLECTION MAP</b>
-🇱🇰 Sri Lanka: <b>${c.sriLanka}</b>    🇮🇳 India: <b>${c.indian}</b>
-🇰🇷 Korea: <b>${c.korean}</b>         🇺🇸 USA: <b>${c.usa}</b>
-🇯🇵 Japan: <b>${c.japan}</b>          🇨🇳 China: <b>${c.china}</b>
-🇬🇧 UK: <b>${c.uk}</b>              🌎 Worldwide Library
+🎨 <b>SPECIAL COLLECTIONS</b>
+🎨 Animation: <b>${c.animation}</b>  |  🍥 Anime: <b>${c.anime}</b>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎨 <b>GENRE &amp; SPECIAL COLLECTIONS</b>
-🎨 Animation: <b>${c.animation}</b>    🍥 Anime: <b>${c.anime}</b>
-🎬 Movies: <b>${c.movies}</b>           📺 Series: <b>${c.series}</b>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎬 <b>QUALITY LAYER</b>
-💎 4K UHD        🎥 1080P Full HD
-⚡ 720P HD       📱 480P Standard
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📡 <b>CONTENT FLOW</b>
-📥 Telegram Upload  →  🔎 Detection
-🗂️ Database Catalog  →  🌐 Mini App  →  🎬 Delivery
+Telegram → Database → Mini App → Delivery
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📊 <b>DATABASE ACTIVITY</b>
-🟢 DATABASE: ACTIVE      🔄 SYNC: AUTOMATIC
-📌 MESSAGE: PERSISTENT   ⚡ UPDATES: LIVE
-🕐 LAST SYNC: <b>${formatUpdated(updated)}</b>
+📊 <b>DATABASE</b>
+🟢 ACTIVE  |  📌 PERSISTENT  |  🔄 AUTOMATIC
+🕐 Last Sync: <b>${formatUpdated(updated)}</b>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✨ <b>LIVE FEED</b>
-🎞️ New movies &amp; series are added automatically.
-📡 Database data stays synchronized in real time.
-🔄 This message updates continuously in place.
+✨ New titles are added automatically.
+📌 This message updates in place.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 👑 <b>CINE UNIVERSE OFFICIAL</b>
-🎬 Your cinematic library, always moving.
 👤 Founder &amp; Developer: <b>Dinidu Induwara</b>
-
 © 2026 <b>Cine Universe™</b> • All Rights Reserved.`;
 }
 async function telegram(method, payload) {
