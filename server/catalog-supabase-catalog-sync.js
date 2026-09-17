@@ -8,6 +8,7 @@ const originalWriteFile = fsPromises.writeFile.bind(fsPromises);
 const ROOT = process.cwd();
 const MOVIE_CATALOG_FILE = path.join(ROOT, 'server', 'published-catalog.json');
 const TV_CATALOG_FILE = path.join(ROOT, 'server', 'published-tv-catalog.json');
+const DOWNLOADS_FILE = path.join(ROOT, 'server', 'downloads.json');
 const SUPABASE_URL = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SUPABASE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 
@@ -59,10 +60,64 @@ async function syncOne(key, file) {
   const remote = await readRemoteObject(key);
   const merged = { ...remote, ...local };
 
-  // IMPORTANT: this is additive. Records that already exist in Supabase but
-  // are absent from the local runtime file are deliberately preserved.
+  // Additive merge only: records already in Supabase are never deleted.
   await writeRemoteObject(key, merged);
   console.log(`[catalog-sync] ${key}: preserved ${Object.keys(remote).length} existing + synced ${Object.keys(local).length} local records = ${Object.keys(merged).length} total.`);
+}
+
+function movieIdFromDownloadKey(key) {
+  const match = String(key || '').match(/^movie:(\d+)(?::[^:]+)?$/i);
+  return match?.[1] || '';
+}
+
+function buildDownloadCatalogEntry(movieId, record) {
+  const title = String(record?.title || '').trim();
+  if (!movieId || !title) return null;
+  return {
+    id: Number(movieId),
+    tmdbId: Number(movieId),
+    title,
+    originalTitle: title,
+    year: String(record?.year || '').slice(0, 4),
+    type: 'Movie',
+    mediaType: 'movie',
+    poster: String(record?.poster || ''),
+    backdrop: String(record?.backdrop || ''),
+    overview: String(record?.overview || ''),
+    genres: Array.isArray(record?.genres) ? record.genres : [],
+    cast: Array.isArray(record?.cast) ? record.cast : [],
+    downloadsBackfilled: true,
+    lastDownloadAt: String(record?.updated_at || '')
+  };
+}
+
+async function backfillCatalogFromDownloads() {
+  if (!SUPABASE_URL || !SUPABASE_KEY) return;
+
+  const remoteDownloads = await readRemoteObject('downloads');
+  const localDownloads = await readLocalObject(DOWNLOADS_FILE);
+  const downloads = { ...remoteDownloads, ...localDownloads };
+  if (!Object.keys(downloads).length) return;
+
+  const remoteCatalog = await readRemoteObject('movieCatalog');
+  const additions = {};
+
+  for (const [key, record] of Object.entries(downloads)) {
+    const movieId = movieIdFromDownloadKey(key);
+    if (!movieId || remoteCatalog[movieId] || additions[movieId]) continue;
+
+    const entry = buildDownloadCatalogEntry(movieId, record);
+    if (entry) additions[movieId] = entry;
+  }
+
+  if (!Object.keys(additions).length) {
+    console.log(`[catalog-sync] movieCatalog already covers all ${Object.keys(downloads).length} download records by TMDB ID.`);
+    return;
+  }
+
+  const mergedCatalog = { ...remoteCatalog, ...additions };
+  await writeRemoteObject('movieCatalog', mergedCatalog);
+  console.log(`[catalog-sync] movieCatalog backfilled ${Object.keys(additions).length} missing movie IDs from downloads; total ${Object.keys(mergedCatalog).length}. Existing records preserved.`);
 }
 
 export async function syncPublishedCatalogs() {
@@ -77,11 +132,16 @@ export async function syncPublishedCatalogs() {
   } catch (error) {
     console.warn('[catalog-sync] TV catalog sync failed; local catalog kept:', error.message || error);
   }
+
+  try {
+    await backfillCatalogFromDownloads();
+  } catch (error) {
+    console.warn('[catalog-sync] download-to-catalog backfill failed; existing data kept:', error.message || error);
+  }
 }
 
-// Sync the existing published catalogs once at startup. This recovers any
-// locally published content that is missing from Supabase without deleting or
-// replacing older Supabase records.
+// Startup recovery: publish locally available catalog records and backfill any
+// missing movie catalog entries from the persistent downloads database.
 await syncPublishedCatalogs();
 
 // Every future catalog write is also merged into Supabase. The local write
