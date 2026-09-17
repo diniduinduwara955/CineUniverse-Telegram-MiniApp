@@ -110,35 +110,35 @@ function formatUpdated(date) {
   return new Intl.DateTimeFormat('en-LK', { timeZone:'Asia/Colombo', year:'numeric', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }).format(date);
 }
 function buildMessage(c, updated) {
-  return `╭──────────────────────────────────────╮
-│        🎬 <b>𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘™</b>        │
-│          𝗟𝗜𝗩𝗘 𝗖𝗜𝗡𝗘𝗠𝗔 𝗖𝗢𝗥𝗘          │
-╰──────────────────────────────────────╯
-        📡 <b>${LIVE_MARKER}</b>
-      🟢 <b>ONLINE</b> • ⚡ <b>AUTO SYNC</b> • 🔄 <b>LIVE</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  return `🎬 <b>𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘™</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        <b>${LIVE_MARKER}</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🟢 <b>ONLINE</b>  •  ⚡ <b>AUTO SYNC</b>  •  🔄 <b>LIVE</b>
+
 🎞️ <b>LIBRARY CORE</b>
-🎬 Movies: <b>${c.movies}</b>   │   📺 Series: <b>${c.series}</b>   │   💎 Total: <b>${c.total}</b>
-📥 Delivery Maps: <b>${c.downloads}</b>   │   🎬 Quality: 4K • 1080P • 720P • 480P
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎬 Movies: <b>${c.movies}</b>  │  📺 Series: <b>${c.series}</b>  │  💎 Total: <b>${c.total}</b>
+📥 Delivery Maps: <b>${c.downloads}</b>  │  🎬 Quality: 4K • 1080P • 720P • 480P
+
 🌍 <b>REGIONAL CINEMA MAP</b>
 🇱🇰 Sri Lanka <b>${c.sriLanka}</b>  │  🇮🇳 India <b>${c.indian}</b>  │  🇰🇷 Korea <b>${c.korean}</b>
 🇺🇸 USA <b>${c.usa}</b>  │  🇯🇵 Japan <b>${c.japan}</b>  │  🇨🇳 China <b>${c.china}</b>  │  🇬🇧 UK <b>${c.uk}</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 🎨 <b>CURATED COLLECTIONS</b>
 🎨 Animation <b>${c.animation}</b>  │  🍥 Anime <b>${c.anime}</b>  │  🌎 Worldwide Library
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 🎥 <b>CINEMA PIPELINE</b>
 📥 Telegram → 🔎 Detection → 🗂️ Database → 🌐 Mini App → 🎬 Delivery
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 🛰️ <b>LIVE ENGINE</b>
 🟢 Core: ACTIVE  │  ☁️ State: DATABASE  │  📌 Message: PERSISTENT  │  ⚡ Feed: LIVE
 🔄 Sync: AUTOMATIC  │  🕐 Last Catalog Sync: <b>${formatUpdated(updated)}</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 ✨ <b>LIVE FEED</b>
 🎞️ New titles enter automatically  │  📡 Data stays synchronized
 🔄 This message updates in place — <b>NO DUPLICATE FEED</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 👑 <b>CINE UNIVERSE OFFICIAL</b>  •  🎬 <i>Built for the cinema experience</i>
 👤 Founder &amp; Developer: <b>Dinidu Induwara</b>
 © 2026 <b>Cine Universe™</b> • All Rights Reserved`;
