@@ -1,34 +1,55 @@
 import { spawn } from 'node:child_process';
 
-const children = [];
+// Isolated launcher: the existing Cine Universe server runs exactly as before,
+// while the Live Content Database runs as a separate Node process.
+// This keeps the live updater completely independent from Telegram getUpdates polling.
 
-function start(name, args) {
-  const child = spawn(process.execPath, args, {
+const children = new Map();
+let shuttingDown = false;
+
+function start(name, script) {
+  const child = spawn(process.execPath, [script], {
     cwd: process.cwd(),
     env: process.env,
-    stdio: 'inherit',
+    stdio: 'inherit'
   });
-  children.push({ name, child });
+
+  children.set(name, child);
+  console.log(`[live-runner] ${name} started (pid=${child.pid})`);
+
   child.on('exit', (code, signal) => {
-    console.log(`[${name}] exited code=${code} signal=${signal}`);
+    children.delete(name);
+    console.log(`[live-runner] ${name} exited (code=${code ?? 'null'}, signal=${signal ?? 'null'})`);
+
+    if (!shuttingDown && name === 'live-content') {
+      setTimeout(() => {
+        if (!shuttingDown && !children.has('live-content')) {
+          start('live-content', 'server/live-content-database.js');
+        }
+      }, 3000);
+    }
   });
-  child.on('error', (err) => {
-    console.error(`[${name}] process error:`, err.message || err);
+
+  child.on('error', (error) => {
+    console.error(`[live-runner] ${name} failed to start:`, error.message || error);
   });
+
   return child;
 }
 
-// Preload the catalog bridge only for the existing backend process.
-// This keeps the existing server.js logic/UI intact while making published
-// catalog reads consistent with the preserved Supabase runtime catalog.
-start('unified-backend', ['-r', './server/catalog-supabase-bridge.cjs', 'server.js']);
-start('live-content', ['server/live-content-database.js']);
+start('cine-universe', 'server.js');
+start('live-content', 'server/live-content-database.js');
 
 function shutdown(signal) {
-  console.log(`[runner] ${signal} received; stopping child processes`);
-  for (const { child } of children) {
-    if (!child.killed) child.kill(signal);
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[live-runner] ${signal} received; stopping isolated processes.`);
+
+  for (const child of children.values()) {
+    try { child.kill('SIGTERM'); } catch {}
   }
+
+  setTimeout(() => process.exit(0), 1000).unref();
 }
 
 process.on('SIGTERM', () => shutdown('SIGTERM'));
