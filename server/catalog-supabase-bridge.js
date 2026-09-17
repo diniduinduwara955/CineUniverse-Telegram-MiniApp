@@ -7,6 +7,7 @@ const originalFetch = globalThis.fetch.bind(globalThis);
 const CATALOG_FILE = path.join(process.cwd(), 'server', 'published-catalog.json');
 const TV_CATALOG_FILE = path.join(process.cwd(), 'server', 'published-tv-catalog.json');
 const DOWNLOADS_FILE = path.join(process.cwd(), 'server', 'downloads.json');
+const LIVE_MESSAGE_FILE = path.join(process.cwd(), 'server', 'live-content-message.json');
 const SUPABASE_URL = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SUPABASE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 const WELCOME_IMAGE_URL = 'https://raw.githubusercontent.com/diniduinduwara955/CineUniverse-Telegram-MiniApp/main/public/cine-universe-bot-welcome.jpg';
@@ -107,6 +108,30 @@ async function saveRuntimeCatalog(key, payload) {
   if (!response.ok) throw new Error(`Supabase ${key} HTTP ${response.status}`);
 }
 
+async function getExistingLiveMessage() {
+  try {
+    const local = JSON.parse(await originalReadFile(LIVE_MESSAGE_FILE, 'utf8'));
+    if (Number(local?.message_id)) {
+      return {
+        chat_id: String(local.chat_id || ''),
+        message_id: Number(local.message_id),
+      };
+    }
+  } catch {}
+
+  try {
+    const remote = await fetchRuntimeCatalog('liveContentMessage');
+    if (remote && Number(remote.message_id)) {
+      return {
+        chat_id: String(remote.chat_id || ''),
+        message_id: Number(remote.message_id),
+      };
+    }
+  } catch {}
+
+  return null;
+}
+
 fs.readFile = async function(file, options) {
   const target = path.resolve(String(file));
   const isMovie = target === path.resolve(CATALOG_FILE);
@@ -173,6 +198,28 @@ globalThis.fetch = async function(input, init = {}) {
     const url = String(typeof input === 'string' ? input : input?.url || '');
     const method = String(init?.method || (typeof input !== 'string' ? input?.method || 'GET' : 'GET')).toUpperCase();
     const body = init?.body;
+    const callerStack = String(new Error().stack || '');
+
+    if (
+      method === 'GET' &&
+      /\/rest\/v1\/cine_runtime_state(?:\?|$)/.test(url) &&
+      callerStack.includes('live-content-database.js')
+    ) {
+      const match = url.match(/[?&]key=eq\.(movieCatalog|tvCatalog)(?:&|$)/);
+      if (match) {
+        const localFile = match[1] === 'movieCatalog' ? CATALOG_FILE : TV_CATALOG_FILE;
+        try {
+          const localText = await originalReadFile(localFile, 'utf8');
+          const localPayload = JSON.parse(localText);
+          if (Array.isArray(localPayload)) {
+            return new Response(JSON.stringify([{ payload: localPayload }]), {
+              status: 200,
+              headers: { 'content-type': 'application/json' }
+            });
+          }
+        } catch {}
+      }
+    }
 
     if (method === 'POST' && /\/sendPhoto(?:\?|$)/.test(url) && body && typeof body.get === 'function' && typeof body.set === 'function') {
       const oldCaption = String(body.get('caption') || '');
@@ -191,6 +238,21 @@ globalThis.fetch = async function(input, init = {}) {
     if (method === 'POST' && /\/sendMessage(?:\?|$)/.test(url) && typeof body === 'string') {
       const payload = JSON.parse(body);
       const oldNotice = String(payload?.text || '');
+
+      if (oldNotice.includes('𝙇𝙄𝙑𝙀 𝘾𝙊𝙉𝙏𝙀𝙉𝙏 𝘿𝘼𝙏𝘼𝘽𝘼𝙎𝙀')) {
+        const existing = await getExistingLiveMessage();
+        if (existing?.message_id) {
+          const editPayload = {
+            ...payload,
+            chat_id: String(existing.chat_id || payload.chat_id),
+            message_id: Number(existing.message_id)
+          };
+          const editUrl = url.replace('/sendMessage', '/editMessageText');
+          console.log(`[catalog-bridge] Live database fallback converted to editMessageText for message ${existing.message_id}.`);
+          return originalFetch(editUrl, { ...init, body: JSON.stringify(editPayload) });
+        }
+      }
+
       if (oldNotice.includes('<b>FILE NOTICE</b>') || oldNotice.includes('ඔයාට ලැබුණු Movie file එක තාවකාලිකයි')) {
         payload.text = [
           '🚨 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀 𝘼𝙇𝙀𝙍𝙏',
@@ -224,4 +286,4 @@ globalThis.fetch = async function(input, init = {}) {
   return originalFetch(input, init);
 };
 
-console.log('[catalog-bridge] Supabase catalog + downloads bridge loaded; local writes + new download sync + future FILE NOTICE + private welcome delivery enabled.');
+console.log('[catalog-bridge] Supabase catalog + downloads bridge loaded; live database same-message mode + new download sync + future FILE NOTICE + private welcome delivery enabled.');
