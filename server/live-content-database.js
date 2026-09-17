@@ -110,40 +110,44 @@ function formatUpdated(date) {
   return new Intl.DateTimeFormat('en-LK', { timeZone:'Asia/Colombo', year:'numeric', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }).format(date);
 }
 function buildMessage(c, updated) {
-  return `🎬 <b>𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘™</b>
+  return `🎬 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀™
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        𝙇𝙄𝙑𝙀 𝘾𝙊𝙉𝙏𝙀𝙉𝙏 𝘿𝘼𝙏𝘼𝘽𝘼𝙎𝙀
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        <b>${LIVE_MARKER}</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🟢 𝙎𝙔𝙎𝙏𝙀𝙈  •  𝙊𝙉𝙇𝙄𝙉𝙀
+⚡ 𝘼𝙐𝙏𝙊 𝙎𝙔𝙉𝘾   🔄 𝙇𝙄𝙑𝙀 𝙐𝙋𝘿𝘼𝙏𝙀𝙎   📡 𝙏𝙂 𝘾𝙊𝙍𝙀
 
-🟢 <b>ONLINE</b>&#160;&#160;•&#160;&#160;⚡ <b>AUTO SYNC</b>&#160;&#160;•&#160;&#160;🔄 <b>LIVE</b>
+🎞️ 𝙇𝙄𝘽𝙍𝘼𝙍𝙔 𝘾𝙊𝙍𝙀
+🎬 Movies: ${c.movies}   │   📺 Series: ${c.series}   │   💎 Total: ${c.total}
+📥 Delivery Maps: ${c.downloads}   │   🎯 Quality: 4K • 1080P • 720P • 480P
 
-🎞️ <b>LIBRARY CORE</b>
-🎬 Movies: <b>${c.movies}</b>&#160;&#160;&#160;&#160;│&#160;&#160;&#160;&#160;📺 Series: <b>${c.series}</b>&#160;&#160;&#160;&#160;│&#160;&#160;&#160;&#160;💎 Total: <b>${c.total}</b>
-📥 Delivery Maps: <b>${c.downloads}</b>&#160;&#160;&#160;&#160;│&#160;&#160;&#160;&#160;🎬 Quality: <b>4K</b>&#160;•&#160;<b>1080P</b>&#160;•&#160;<b>720P</b>&#160;•&#160;<b>480P</b>
+🌍 𝙍𝙀𝙂𝙄𝙊𝙉𝘼𝙇 𝘾𝙄𝙉𝙀𝙈𝘼
+🇱🇰 Sri Lanka: ${c.sriLanka}   │   🇮🇳 India: ${c.indian}   │   🇰🇷 Korea: ${c.korean}
+🇺🇸 USA: ${c.usa}      │   🇯🇵 Japan: ${c.japan}   │   🇨🇳 China: ${c.china}
+🇬🇧 UK: ${c.uk}        │   🌎 Worldwide Library
 
-🌍 <b>REGIONAL CINEMA MAP</b>
-🇱🇰 Sri Lanka <b>${c.sriLanka}</b>&#160;&#160;&#160;&#160;🇮🇳 India <b>${c.indian}</b>&#160;&#160;&#160;&#160;🇰🇷 Korea <b>${c.korean}</b>
-🇺🇸 USA <b>${c.usa}</b>&#160;&#160;&#160;&#160;🇯🇵 Japan <b>${c.japan}</b>&#160;&#160;&#160;&#160;🇨🇳 China <b>${c.china}</b>
-🇬🇧 UK <b>${c.uk}</b>&#160;&#160;&#160;&#160;🌎 Worldwide Library
+🎨 𝘾𝙐𝙍𝘼𝙏𝙀𝘿 𝘾𝙊𝙇𝙇𝙀𝘾𝙏𝙄𝙊𝙉𝙎
+🎨 Animation: ${c.animation}   │   🍥 Anime: ${c.anime}   │   🌎 Global Cinema
 
-🎨 <b>CURATED COLLECTIONS</b>
-🎨 Animation <b>${c.animation}</b>&#160;&#160;&#160;&#160;🍥 Anime <b>${c.anime}</b>&#160;&#160;&#160;&#160;🌎 Worldwide Library
+🎥 𝘾𝙄𝙉𝙀𝙈𝘼 𝙋𝙄𝙋𝙀𝙇𝙄𝙉𝙀
+📥 Telegram → 🔎 Detection → 🗂️ Database
+🌐 Mini App → 🎬 Quality Match → 🚀 Delivery
 
-🎥 <b>CINEMA PIPELINE</b>
-📥 Telegram&#160;&#160;→&#160;&#160;🔎 Detection&#160;&#160;→&#160;&#160;🗂️ Database&#160;&#160;→&#160;&#160;🌐 Mini App&#160;&#160;→&#160;&#160;🎬 Delivery
+🛰️ 𝙇𝙄𝙑𝙀 𝙀𝙉𝙂𝙄𝙉𝙀
+🟢 Core: ACTIVE   │   ☁️ State: DATABASE
+📌 Message: PERSISTENT   │   ⚡ Feed: LIVE
+🔄 Sync: AUTOMATIC   │   🕐 Last Sync: ${formatUpdated(updated)}
 
-🛰️ <b>LIVE ENGINE</b>
-🟢 Core: ACTIVE&#160;&#160;&#160;&#160;│&#160;&#160;&#160;&#160;☁️ State: DATABASE&#160;&#160;&#160;&#160;│&#160;&#160;&#160;&#160;📌 Message: PERSISTENT
-⚡ Feed: LIVE&#160;&#160;&#160;&#160;│&#160;&#160;&#160;&#160;🔄 Sync: AUTOMATIC&#160;&#160;&#160;&#160;│&#160;&#160;&#160;&#160;🕐 Last Sync: <b>${formatUpdated(updated)}</b>
+✨ 𝙇𝙄𝙑𝙀 𝙁𝙀𝙀𝘿
+🎞️ New titles enter automatically   │   📡 Data stays synchronized
+🔄 Database refreshes continuously   │   🚫 No duplicate feed
 
-✨ <b>LIVE FEED</b>
-🎞️ New titles enter automatically&#160;&#160;•&#160;&#160;📡 Data stays synchronized
-🔄 This message updates in place&#160;&#160;—&#160;&#160;<b>NO DUPLICATE FEED</b>
+👑 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀 𝙊𝙁𝙁𝙄𝘾𝙄𝘼𝙇
+🎬 𝘽𝙪𝙞𝙡𝙩 𝙛𝙤𝙧 𝙩𝙝𝙚 𝙘𝙞𝙣𝙚𝙢𝙖 𝙚𝙭𝙥𝙚𝙧𝙞𝙚𝙣𝙘𝙚
+👤 𝙁𝙤𝙪𝙣𝙙𝙚𝙧 & 𝘿𝙚𝙫𝙚𝙡𝙤𝙥𝙚𝙧: 𝘿𝙞𝙣𝙞𝙙𝙪 𝙄𝙣𝙙𝙪𝙬𝙖𝙧𝙖
 
-👑 <b>CINE UNIVERSE OFFICIAL</b>&#160;&#160;•&#160;&#160;🎬 <i>Built for the cinema experience</i>
-👤 Founder &amp; Developer: <b>Dinidu Induwara</b>
-© 2026 <b>Cine Universe™</b> • All Rights Reserved`;
+© 2026 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀™ • 𝘼𝙡𝙡 𝙍𝙞𝙜𝙝𝙩𝙨 𝙍𝙚𝙨𝙚𝙧𝙫𝙚𝙙`;
 }
 async function telegram(method, payload) {
   if (!BOT_TOKEN) throw new Error('TELEGRAM_BOT_TOKEN is not configured.');
