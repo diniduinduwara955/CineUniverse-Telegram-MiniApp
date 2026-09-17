@@ -7,11 +7,9 @@ const BOT_TOKEN = String(process.env.TELEGRAM_BOT_TOKEN || '').trim();
 const SUPABASE_URL = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SUPABASE_SERVICE_ROLE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 const REFRESH_MS = Number(process.env.LIVE_CONTENT_REFRESH_MS || 15000);
-const MESSAGE_FILE = path.join(process.cwd(), 'server', 'live-content-message.json');
+const MESSAGE_FILE = path.join(process.cwd(), 'server', 'live-content-messages-v2.json');
 const MOVIE_FILE = path.join(process.cwd(), 'server', 'published-catalog.json');
 const TV_FILE = path.join(process.cwd(), 'server', 'published-tv-catalog.json');
-const LIVE_MARKER = '𝗟𝗜𝗩𝗘 𝗖𝗢𝗡𝗧𝗘𝗡𝗧 𝗗𝗔𝗧𝗔𝗕𝗔𝗦𝗘';
-const INDIAN_LANGUAGES = new Set(['hi','ta','te','ml','kn','bn','mr','gu','pa','ur','or','as']);
 
 async function readJson(file) {
   try { return JSON.parse(await fs.readFile(file, 'utf8')); } catch { return null; }
@@ -57,130 +55,105 @@ async function loadCatalog(remoteKey, localFile) {
 }
 
 function text(v) { return String(v ?? '').trim().toLowerCase(); }
-function languages(item) {
-  return [item?.originalLanguage,item?.original_language,item?.language,item?.spokenLanguage,item?.spoken_language,
-    ...(Array.isArray(item?.languages) ? item.languages : []),
-    ...(Array.isArray(item?.spoken_languages) ? item.spoken_languages.map(x => typeof x === 'object' ? x?.iso_639_1 || x?.name : x) : [])].filter(Boolean).map(text);
+function titleOf(item) { return String(item?.title || item?.name || item?.original_title || item?.original_name || 'Untitled').trim(); }
+function updatedDate(item) {
+  const value = item?.updatedAt || item?.updated_at || item?.createdAt || item?.created_at || item?.date || item?.addedAt || item?.added_at;
+  const date = value ? new Date(value) : null;
+  return date && Number.isFinite(date.getTime()) ? date : null;
 }
-function countries(item) {
-  const raw = [item?.country,item?.origin_country,item?.originalCountry,item?.originCountry,item?.countryCode,
-    ...(Array.isArray(item?.countries) ? item.countries : []),
-    ...(Array.isArray(item?.production_countries) ? item.production_countries : []),
-    ...(Array.isArray(item?.productionCountries) ? item.productionCountries : [])];
-  return raw.flatMap(x => Array.isArray(x) ? x : [x]).map(x => typeof x === 'object' ? x?.iso_3166_1 || x?.name : x).filter(Boolean).map(text);
+function latest(itemsList, limit = 5) {
+  return [...itemsList].sort((a, b) => (updatedDate(b)?.getTime() || 0) - (updatedDate(a)?.getTime() || 0)).slice(0, limit);
 }
-function genres(item) {
-  return [...(Array.isArray(item?.genres) ? item.genres : []),...(Array.isArray(item?.genre) ? item.genre : []),...(Array.isArray(item?.genre_names) ? item.genre_names : [])]
-    .map(x => typeof x === 'object' ? x?.name : x).filter(Boolean).map(text);
+function qualityOf(item) {
+  return text(item?.quality || item?.resolution || item?.videoQuality || item?.video_quality || item?.label || item?.name || item?.caption);
 }
-function isIndian(item) { return languages(item).some(x => INDIAN_LANGUAGES.has(x) || x.includes('india')) || countries(item).some(x => x === 'in' || x.includes('india')); }
-function isKorean(item) { return languages(item).some(x => x === 'ko' || x.includes('korean')) || countries(item).some(x => x === 'kr' || x.includes('korea')); }
-function isAnimation(item) { return genres(item).some(x => x === 'animation' || x.includes('animation')); }
-function isAnime(item) {
-  const title = text(item?.title || item?.name || item?.original_title || item?.original_name);
-  return isAnimation(item) && (languages(item).includes('ja') || countries(item).some(x => x === 'jp' || x.includes('japan')) || title.includes('anime'));
+function qualityCounts(downloads) {
+  const result = { '4K / UHD': 0, '1080P': 0, '720P': 0, '480P': 0 };
+  for (const item of downloads) {
+    const q = qualityOf(item).replace(/\s+/g, '');
+    if (q.includes('4k') || q.includes('2160')) result['4K / UHD']++;
+    else if (q.includes('1080')) result['1080P']++;
+    else if (q.includes('720')) result['720P']++;
+    else if (q.includes('480')) result['480P']++;
+  }
+  return result;
 }
-function hasCountry(item, codes) {
-  const values = countries(item);
-  return values.some(value => codes.some(code => value === code || value.includes(code)));
+function formatDate(date = new Date()) {
+  return new Intl.DateTimeFormat('en-LK', { timeZone: 'Asia/Colombo', year: 'numeric', month: 'long', day: '2-digit' }).format(date);
 }
-function counts(movies, series, downloads) {
-  const all = [...movies, ...series];
-  return {
-    movies: movies.length,
-    series: series.length,
-    total: all.length,
-    downloads: downloads.length,
-    indian: all.filter(isIndian).length,
-    korean: all.filter(isKorean).length,
-    animation: all.filter(isAnimation).length,
-    anime: all.filter(isAnime).length,
-    sriLanka: all.filter(item => hasCountry(item, ['lk','sri lanka','srilanka'])).length,
-    usa: all.filter(item => hasCountry(item, ['us','usa','united states'])).length,
-    japan: all.filter(item => hasCountry(item, ['jp','japan'])).length,
-    china: all.filter(item => hasCountry(item, ['cn','china'])).length,
-    uk: all.filter(item => hasCountry(item, ['gb','uk','united kingdom'])).length
-  };
+function formatTime(date = new Date()) {
+  return new Intl.DateTimeFormat('en-LK', { timeZone: 'Asia/Colombo', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }).format(date);
 }
-function lastUpdated(movies, series) {
-  const dates = [...movies, ...series].map(x => x?.updatedAt).filter(Boolean).map(x => new Date(x)).filter(x => Number.isFinite(x.getTime()));
-  return dates.length ? new Date(Math.max(...dates.map(x => x.getTime()))) : new Date();
+function stamp(date = new Date()) {
+  return `📅 𝗗𝗮𝘁𝗲  ·  ${formatDate(date)}\n⏰ 𝗧𝗶𝗺𝗲  ·  ${formatTime(date)} 🇱🇰`;
 }
-function formatUpdated(date) {
-  return new Intl.DateTimeFormat('en-LK', { timeZone:'Asia/Colombo', year:'numeric', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }).format(date);
+function latestLines(list) {
+  return latest(list).map((item, index) => `${String(index + 1).padStart(2, '0')}  •  𝗠𝗔𝗜𝗡  •  ${titleOf(item)}`).join('\n') || '— 𝗡𝗼 𝗻𝗲𝘄 𝗰𝗼𝗻𝘁𝗲𝗻𝘁 —';
 }
-function buildMessage(c, updated) {
-  return `🎬 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀™
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        𝙇𝙄𝙑𝙀 𝘾𝙊𝙉𝙏𝙀𝙉𝙏 𝘿𝘼𝙏𝘼𝘽𝘼𝙎𝙀
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🟢 𝙎𝙔𝙎𝙏𝙀𝙈  •  𝙊𝙉𝙇𝙄𝙉𝙀
-⚡ 𝘼𝙐𝙏𝙊 𝙎𝙔𝙉𝘾   🔄 𝙇𝙄𝙑𝙀 𝙐𝙋𝘿𝘼𝙏𝙀𝙎   📡 𝙏𝙂 𝘾𝙊𝙍𝙀
-
-🎞️ 𝙇𝙄𝘽𝙍𝘼𝙍𝙔 𝘾𝙊𝙍𝙀
-🎬 Movies: ${c.movies}   │   📺 Series: ${c.series}   │   💎 Total: ${c.total}
-📥 Delivery Maps: ${c.downloads}   │   🎯 Quality: 4K • 1080P • 720P • 480P
-
-🌍 𝙍𝙀𝙂𝙄𝙊𝙉𝘼𝙇 𝘾𝙄𝙉𝙀𝙈𝘼
-🇱🇰 Sri Lanka: ${c.sriLanka}   │   🇮🇳 India: ${c.indian}   │   🇰🇷 Korea: ${c.korean}
-🇺🇸 USA: ${c.usa}      │   🇯🇵 Japan: ${c.japan}   │   🇨🇳 China: ${c.china}
-🇬🇧 UK: ${c.uk}        │   🌎 Worldwide Library
-
-🎨 𝘾𝙐𝙍𝘼𝙏𝙀𝘿 𝘾𝙊𝙇𝙇𝙀𝘾𝙏𝙄𝙊𝙉𝙎
-🎨 Animation: ${c.animation}   │   🍥 Anime: ${c.anime}   │   🌎 Global Cinema
-
-🎥 𝘾𝙄𝙉𝙀𝙈𝘼 𝙋𝙄𝙋𝙀𝙇𝙄𝙉𝙀
-📥 Telegram → 🔎 Detection → 🗂️ Database
-🌐 Mini App → 🎬 Quality Match → 🚀 Delivery
-
-🛰️ 𝙇𝙄𝙑𝙀 𝙀𝙉𝙂𝙄𝙉𝙀
-🟢 Core: ACTIVE   │   ☁️ State: DATABASE
-📌 Message: PERSISTENT   │   ⚡ Feed: LIVE
-🔄 Sync: AUTOMATIC   │   🕐 Last Sync: ${formatUpdated(updated)}
-
-✨ 𝙇𝙄𝙑𝙀 𝙁𝙀𝙀𝘿
-🎞️ New titles enter automatically   │   📡 Data stays synchronized
-🔄 Database refreshes continuously   │   🚫 No duplicate feed
-
-👑 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀 𝙊𝙁𝙁𝙄𝘾𝙄𝘼𝙇
-🎬 𝘽𝙪𝙞𝙡𝙩 𝙛𝙤𝙧 𝙩𝙝𝙚 𝙘𝙞𝙣𝙚𝙢𝙖 𝙚𝙭𝙥𝙚𝙧𝙞𝙚𝙣𝙘𝙚
-👤 𝙁𝙤𝙪𝙣𝙙𝙚𝙧 & 𝘿𝙚𝙫𝙚𝙡𝙤𝙥𝙚𝙧: 𝘿𝙞𝙣𝙞𝙙𝙪 𝙄𝙣𝙙𝙪𝙬𝙖𝙧𝙖
-
-© 2026 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀™ • 𝘼𝙡𝙡 𝙍𝙞𝙜𝙝𝙩𝙨 𝙍𝙚𝙨𝙚𝙧𝙫𝙚𝙙`;
+function buildMovies(movies, now) {
+  return `🎬 𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘\n        𝙇𝙄𝙑𝙀 𝙈𝙊𝙑𝙄𝙀 𝘿𝘼𝙏𝘼𝘽𝘼𝙎𝙀\n\n━━━━━━━━━━━━━━━━━━━━\n\n🎞️ 𝙈𝙊𝙑𝙄𝙀𝙎\n\n𝗧𝗢𝗧𝗔𝗟 𝗠𝗢𝗩𝗜𝗘𝗦  ·  𝟬${movies.length}\n\n✦ 𝙇𝘼𝙏𝙀𝙎𝙏 𝘼𝘿𝘿𝙀𝘿\n\n${latestLines(movies)}\n\n━━━━━━━━━━━━━━━━━━━━\n\n🟢 𝗗𝗔𝗧𝗔𝗕𝗔𝗦𝗘  ·  𝗟𝗜𝗩𝗘\n🔄 𝘼𝙐𝙏𝙊 𝙐𝙋𝘿𝘼𝙏𝙀  ·  𝗘𝗡𝗔𝗕𝗟𝗘𝗗\n\n🕒 𝙇𝘼𝙎𝙏 𝙐𝙋𝘿𝘼𝙏𝙀𝘿\n${stamp(now)}\n\n💙 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀\n© 𝟮𝟬𝟮𝟲 𝗖𝗶𝗻𝗲 𝗨𝗻𝗶𝘃𝗲𝗿𝘀𝗲`;
 }
+function buildSeries(series, now) {
+  return `📺 𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘\n        𝙇𝙄𝙑𝙀 𝙎𝙀𝙍𝙄𝙀𝙎 𝘿𝘼𝙏𝘼𝘽𝘼𝙎𝙀\n\n━━━━━━━━━━━━━━━━━━━━\n\n📺 𝙏𝙑 𝙎𝙀𝙍𝙄𝙀𝙎\n\n𝗧𝗢𝗧𝗔𝗟 𝗦𝗘𝗥𝗜𝗘𝗦  ·  𝟬${series.length}\n\n✦ 𝙇𝘼𝙏𝙀𝙎𝙏 𝘼𝘿𝘿𝙀𝘿\n\n${latestLines(series)}\n\n━━━━━━━━━━━━━━━━━━━━\n\n🟢 𝗗𝗔𝗧𝗔𝗕𝗔𝗦𝗘  ·  𝗟𝗜𝗩𝗘\n🔄 𝘼𝙐𝙏𝙊 𝙐𝙋𝘿𝘼𝙏𝙀  ·  𝗘𝗡𝗔𝗕𝗟𝗘𝗗\n\n🕒 𝙇𝘼𝙎𝙏 𝙐𝙋𝘿𝘼𝙏𝙀𝘿\n${stamp(now)}\n\n💙 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀\n© 𝟮𝟬𝟮𝟲 𝗖𝗶𝗻𝗲 𝗨𝗻𝗶𝘃𝗲𝗿𝘀𝗲`;
+}
+function buildDownloads(downloads, now) {
+  const q = qualityCounts(downloads);
+  return `📥 𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘\n        𝙇𝙄𝙑𝙀 𝘿𝙊𝙒𝙉𝙇𝙊𝘼𝘿 𝘿𝘼𝙏𝘼𝘽𝘼𝙎𝙀\n\n━━━━━━━━━━━━━━━━━━━━\n\n📥 𝙁𝙄𝙇𝙀 𝙎𝙏𝘼𝙏𝙎\n\n💎 𝟰𝗞 / 𝗨𝗛𝗗   ·  ${String(q['4K / UHD']).padStart(3, '0')}\n🔥 𝟭𝟬𝟴𝟬𝗣      ·  ${String(q['1080P']).padStart(3, '0')}\n⚡ 𝟳𝟮𝟬𝗣       ·  ${String(q['720P']).padStart(3, '0')}\n📱 𝟰𝟴𝟬𝗣       ·  ${String(q['480P']).padStart(3, '0')}\n\n𝗧𝗢𝗧𝗔𝗟 𝗙𝗜𝗟𝗘𝗦  ·  ${downloads.length}\n\n━━━━━━━━━━━━━━━━━━━━\n\n🟢 𝗗𝗔𝗧𝗔𝗕𝗔𝗦𝗘  ·  𝗟𝗜𝗩𝗘\n🔄 𝘼𝙐𝙏𝙊 𝙐𝙋𝘿𝘼𝙏𝙀  ·  𝗘𝗡𝗔𝗕𝗟𝗘𝗗\n\n🕒 𝙇𝘼𝙎𝙏 𝙐𝙋𝘿𝘼𝙏𝙀𝘿\n${stamp(now)}\n\n💙 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀\n© 𝟮𝟬𝟮𝟲 𝗖𝗶𝗻𝗲 𝗨𝗻𝗶𝘃𝗲𝗿𝘀𝗲`;
+}
+function buildOverall(movies, series, downloads, now) {
+  const total = movies.length + series.length;
+  return `🌐 𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘\n        𝙇𝙄𝙑𝙀 𝘾𝙊𝙉𝙏𝙀𝙉𝙏 𝙎𝙏𝘼𝙏𝙐𝙎\n\n━━━━━━━━━━━━━━━━━━━━\n\n🎬 𝗠𝗢𝗩𝗜𝗘𝗦       ·  ${movies.length}\n📺 𝗧𝗩 𝗦𝗘𝗥𝗜𝗘𝗦    ·  ${series.length}\n📥 𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗦   ·  ${downloads.length}\n\n𝗧𝗢𝗧𝗔𝗟 𝗧𝗜𝗧𝗟𝗘𝗦  ·  ${total}\n\n━━━━━━━━━━━━━━━━━━━━\n\n🟢 𝗦𝗬𝗦𝗧𝗘𝗠  ·  𝗢𝗡𝗟𝗜𝗡𝗘\n🔄 𝗔𝗨𝗧𝗢 𝗦𝗬𝗡𝗖  ·  𝗘𝗡𝗔𝗕𝗟𝗘𝗗\n⚡ 𝗙𝗘𝗘𝗗      ·  𝗟𝗜𝗩𝗘\n📌 𝗠𝗘𝗦𝗦𝗔𝗚𝗘𝗦   ·  𝟬𝟰 𝗣𝗘𝗥𝗦𝗜𝗦𝗧𝗘𝗡𝗧\n\n━━━━━━━━━━━━━━━━━━━━\n\n🕒 𝙇𝘼𝙎𝙏 𝙐𝙋𝘿𝘼𝙏𝙀𝘿\n${stamp(now)}\n\n💙 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀\n© 𝟮𝟬𝟮𝟲 𝗖𝗶𝗻𝗲 𝗨𝗻𝗶𝘃𝗲𝗿𝘀𝗲`;
+}
+
 async function telegram(method, payload) {
   if (!BOT_TOKEN) throw new Error('TELEGRAM_BOT_TOKEN is not configured.');
-  const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${method}`, { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(payload) });
+  const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${method}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
   const data = await res.json();
   if (!res.ok || !data.ok) throw new Error(data?.description || `Telegram HTTP ${res.status}`);
   return data.result;
 }
-async function messageId() {
+
+async function readMessageIds() {
   const local = await readJson(MESSAGE_FILE);
-  if (Number(local?.message_id)) return { messageId:Number(local.message_id), chatId:String(local.chat_id || LIVE_CHANNEL_ID) };
-  const remote = await readRuntimeState('liveContentMessage');
-  if (remote && Number(remote.message_id)) return { messageId:Number(remote.message_id), chatId:String(remote.chat_id || LIVE_CHANNEL_ID) };
+  if (local?.messages && typeof local.messages === 'object') return local;
+  const remote = await readRuntimeState('liveContentMessagesV2');
+  if (remote?.messages && typeof remote.messages === 'object') return remote;
   return null;
 }
-async function saveMessageId(chatId, id) {
-  const payload = { chat_id:String(chatId), message_id:Number(id), updated_at:new Date().toISOString() };
+async function saveMessageIds(messages) {
+  const payload = { chat_id: LIVE_CHANNEL_ID, messages, updated_at: new Date().toISOString() };
   await fs.writeFile(MESSAGE_FILE, JSON.stringify(payload, null, 2), 'utf8');
-  await saveRuntimeState('liveContentMessage', payload);
+  await saveRuntimeState('liveContentMessagesV2', payload);
 }
-async function getPinnedLiveMessage() {
+
+async function editPersistentMessage(id, textValue) {
   try {
-    const chat = await telegram('getChat', { chat_id: LIVE_CHANNEL_ID });
-    const pinned = chat?.pinned_message;
-    const body = String(pinned?.text || pinned?.caption || '');
-    if (body.includes(LIVE_MARKER) && Number(pinned?.message_id)) {
-      return { chatId:String(LIVE_CHANNEL_ID), messageId:Number(pinned.message_id), kind:pinned?.caption ? 'caption' : 'text' };
-    }
+    await telegram('editMessageText', { chat_id: LIVE_CHANNEL_ID, message_id: Number(id), text: textValue, parse_mode: 'HTML', disable_web_page_preview: true });
+    return true;
   } catch (err) {
-    console.warn('[live-content] pinned message lookup failed:', err.message || err);
+    if (/message is not modified/i.test(String(err?.message || err))) return true;
+    console.warn(`[live-content] edit failed for ${id}:`, err.message || err);
+    return false;
   }
-  return null;
 }
+
+async function createInitialMessages(messages) {
+  const result = { ...messages };
+  const definitions = [
+    ['movies', 'movies'],
+    ['series', 'series'],
+    ['downloads', 'downloads'],
+    ['overall', 'overall']
+  ];
+  for (const [key] of definitions) {
+    const sent = await telegram('sendMessage', { chat_id: LIVE_CHANNEL_ID, text: messages[key], parse_mode: 'HTML', disable_web_page_preview: true });
+    result[key] = Number(sent.message_id);
+    try { await telegram('pinChatMessage', { chat_id: LIVE_CHANNEL_ID, message_id: Number(sent.message_id), disable_notification: true }); } catch {}
+  }
+  await saveMessageIds(result);
+  console.log(`[live-content] Created 4 persistent live database messages in channel ${LIVE_CHANNEL_ID}: ${Object.values(result).join(', ')}`);
+}
+
 async function refresh() {
   if (!BOT_TOKEN || !LIVE_CHANNEL_ID) return;
   const [movies, series, downloadsPayload] = await Promise.all([
@@ -188,45 +161,34 @@ async function refresh() {
     loadCatalog('tvCatalog', TV_FILE),
     readRuntimeState('downloads')
   ]);
-  const c = counts(movies, series, items(downloadsPayload));
-  const message = buildMessage(c, lastUpdated(movies, series));
-  console.log(`[live-content] Database counts: movies=${c.movies}, series=${c.series}, downloads=${c.downloads}, total=${c.total}`);
+  const downloads = items(downloadsPayload);
+  const now = new Date();
+  const messages = {
+    movies: buildMovies(movies, now),
+    series: buildSeries(series, now),
+    downloads: buildDownloads(downloads, now),
+    overall: buildOverall(movies, series, downloads, now)
+  };
+  console.log(`[live-content] Database counts: movies=${movies.length}, series=${series.length}, downloads=${downloads.length}, total=${movies.length + series.length}`);
 
-  const saved = await messageId();
-  const pinned = await getPinnedLiveMessage();
-  const candidates = [];
-  if (saved) candidates.push({ ...saved, kind:'text', source:'saved' });
-  if (pinned && (!saved || pinned.messageId !== saved.messageId)) candidates.push({ ...pinned, source:'pinned' });
-
-  for (const candidate of candidates) {
-    try {
-      const method = candidate.kind === 'caption' ? 'editMessageCaption' : 'editMessageText';
-      const payload = { chat_id:candidate.chatId, message_id:candidate.messageId, parse_mode:'HTML', disable_web_page_preview:true };
-      if (candidate.kind === 'caption') payload.caption = message;
-      else payload.text = message;
-      await telegram(method, payload);
-      await saveMessageId(candidate.chatId, candidate.messageId);
-      if (candidate.source === 'pinned') console.log(`[live-content] adopted existing pinned live database message: ${candidate.messageId}`);
-      else console.log(`[live-content] updated existing live content message: ${candidate.messageId}`);
-      return;
-    } catch (err) {
-      if (/message is not modified/i.test(String(err?.message || err))) {
-        await saveMessageId(candidate.chatId, candidate.messageId);
-        return;
-      }
-      console.warn(`[live-content] edit failed for ${candidate.messageId}:`, err.message || err);
-    }
+  const saved = await readMessageIds();
+  if (!saved?.messages?.movies || !saved?.messages?.series || !saved?.messages?.downloads || !saved?.messages?.overall) {
+    await createInitialMessages(messages);
+    return;
   }
 
-  const sent = await telegram('sendMessage', {chat_id:LIVE_CHANNEL_ID,text:message,parse_mode:'HTML',disable_web_page_preview:true});
-  await saveMessageId(LIVE_CHANNEL_ID, sent.message_id);
-  try { await telegram('pinChatMessage', {chat_id:LIVE_CHANNEL_ID,message_id:sent.message_id,disable_notification:true}); }
-  catch (err) { console.warn('[live-content] pin failed:', err.message || err); }
-  console.log(`[live-content] Live database message created: ${sent.message_id}`);
+  const keys = ['movies', 'series', 'downloads', 'overall'];
+  let allEdited = true;
+  for (const key of keys) {
+    const ok = await editPersistentMessage(saved.messages[key], messages[key]);
+    if (!ok) allEdited = false;
+  }
+  if (allEdited) await saveMessageIds(saved.messages);
 }
+
 export function startLiveContentDatabase() {
   if (!BOT_TOKEN) { console.warn('[live-content] Disabled: TELEGRAM_BOT_TOKEN is not configured.'); return; }
-  console.log(`[live-content] Channel: ${LIVE_CHANNEL_ID}`);
+  console.log(`[live-content] Four-message channel: ${LIVE_CHANNEL_ID}`);
   refresh().catch(err => console.error('[live-content] Initial update failed:', err.message || err));
   setInterval(() => refresh().catch(err => console.error('[live-content] Update failed:', err.message || err)), REFRESH_MS);
 }
