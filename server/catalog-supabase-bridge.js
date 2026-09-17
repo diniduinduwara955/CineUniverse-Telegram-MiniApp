@@ -137,6 +137,7 @@ fs.readFile = async function(file, options) {
   const isMovie = target === path.resolve(CATALOG_FILE);
   const isTv = target === path.resolve(TV_CATALOG_FILE);
   const isDownloads = target === path.resolve(DOWNLOADS_FILE);
+  const callerStack = String(new Error().stack || '');
 
   if (isDownloads) {
     try {
@@ -160,6 +161,19 @@ fs.readFile = async function(file, options) {
   }
 
   if (isMovie || isTv) {
+    const isRequestGroupSearch = callerStack.includes('handleGroupTvRequest') || callerStack.includes('resolveRequestedMovie');
+
+    if (isRequestGroupSearch) {
+      try {
+        const local = await originalReadFile(file, options);
+        const localText = typeof local === 'string' ? local : Buffer.from(local).toString('utf8');
+        const localCatalog = JSON.parse(localText);
+        if (localCatalog && typeof localCatalog === 'object' && Object.keys(localCatalog).length > 0) {
+          return local;
+        }
+      } catch {}
+    }
+
     try {
       const payload = await fetchRuntimeCatalog(isMovie ? 'movieCatalog' : 'tvCatalog');
       if (payload && typeof payload === 'object') {
