@@ -80,9 +80,26 @@ function isAnime(item) {
   const title = text(item?.title || item?.name || item?.original_title || item?.original_name);
   return isAnimation(item) && (languages(item).includes('ja') || countries(item).some(x => x === 'jp' || x.includes('japan')) || title.includes('anime'));
 }
+function hasCountry(item, codes) {
+  const values = countries(item);
+  return values.some(value => codes.some(code => value === code || value.includes(code)));
+}
 function counts(movies, series) {
   const all = [...movies, ...series];
-  return { movies: movies.length, series: series.length, indian: all.filter(isIndian).length, korean: all.filter(isKorean).length, animation: all.filter(isAnimation).length, anime: all.filter(isAnime).length, total: all.length };
+  return {
+    movies: movies.length,
+    series: series.length,
+    indian: all.filter(isIndian).length,
+    korean: all.filter(isKorean).length,
+    animation: all.filter(isAnimation).length,
+    anime: all.filter(isAnime).length,
+    sriLanka: all.filter(item => hasCountry(item, ['lk','sri lanka','srilanka'])).length,
+    usa: all.filter(item => hasCountry(item, ['us','usa','united states'])).length,
+    japan: all.filter(item => hasCountry(item, ['jp','japan'])).length,
+    china: all.filter(item => hasCountry(item, ['cn','china'])).length,
+    uk: all.filter(item => hasCountry(item, ['gb','uk','united kingdom'])).length,
+    total: all.length
+  };
 }
 function lastUpdated(movies, series) {
   const dates = [...movies, ...series].map(x => x?.updatedAt).filter(Boolean).map(x => new Date(x)).filter(x => Number.isFinite(x.getTime()));
@@ -93,42 +110,60 @@ function formatUpdated(date) {
 }
 function buildMessage(c, updated) {
   return `🎬 𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘™
-━━━━━━━━━━━━━━━━━━━━
-${LIVE_MARKER}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        ${LIVE_MARKER}
+      𝗟𝗜𝗩𝗘 • 𝗔𝗨𝗧𝗢 𝗦𝗬𝗡𝗖 • 𝗔𝗖𝗧𝗜𝗩𝗘
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 🟢 <b>SYSTEM STATUS</b>
-<b>ONLINE</b> • AUTO SYNC ACTIVE
+🟢 ONLINE        ⚡ AUTO SYNC        🔄 REAL-TIME
+📡 TELEGRAM     🗂️ CATALOG          🌐 MINI APP
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📚 <b>LIBRARY OVERVIEW</b>
-🎞️ Movies      <b>${c.movies}</b>
-📺 TV Series   <b>${c.series}</b>
-━━━━━━━━━━━━━━━━━━━━
-💎 TOTAL        <b>${c.total}</b> TITLES
+🎞️ Movies: <b>${c.movies}</b>      📺 TV Series: <b>${c.series}</b>
+💎 Total Titles: <b>${c.total}</b>  📥 Downloads: <b>ACTIVE</b>
 
-🌍 <b>COLLECTIONS</b>
-🇮🇳 Indian       <b>${c.indian}</b>
-🇰🇷 Korean       <b>${c.korean}</b>
-🎨 Animation     <b>${c.animation}</b>
-🍥 Anime         <b>${c.anime}</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🌍 <b>COUNTRY &amp; COLLECTION MAP</b>
+🇱🇰 Sri Lanka: <b>${c.sriLanka}</b>    🇮🇳 India: <b>${c.indian}</b>
+🇰🇷 Korea: <b>${c.korean}</b>         🇺🇸 USA: <b>${c.usa}</b>
+🇯🇵 Japan: <b>${c.japan}</b>          🇨🇳 China: <b>${c.china}</b>
+🇬🇧 UK: <b>${c.uk}</b>              🌎 Worldwide Library
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎨 <b>GENRE &amp; SPECIAL COLLECTIONS</b>
+🎨 Animation: <b>${c.animation}</b>    🍥 Anime: <b>${c.anime}</b>
+🎬 Movies: <b>${c.movies}</b>           📺 Series: <b>${c.series}</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎬 <b>QUALITY LAYER</b>
+💎 4K UHD        🎥 1080P Full HD
+⚡ 720P HD       📱 480P Standard
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📡 <b>CONTENT FLOW</b>
-Telegram → Catalog → Mini App
+📥 Telegram Upload  →  🔎 Detection
+🗂️ Database Catalog  →  🌐 Mini App  →  🎬 Delivery
 
-🕐 <b>LAST SYNC</b>
-${formatUpdated(updated)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 <b>DATABASE ACTIVITY</b>
+🟢 DATABASE: ACTIVE      🔄 SYNC: AUTOMATIC
+📌 MESSAGE: PERSISTENT   ⚡ UPDATES: LIVE
+🕐 LAST SYNC: <b>${formatUpdated(updated)}</b>
 
-🔄 <b>DATABASE MODE</b>
-LIVE • PERSISTENT • AUTOMATIC
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✨ <b>LIVE FEED</b>
+🎞️ New movies &amp; series are added automatically.
+📡 Database data stays synchronized in real time.
+🔄 This message updates continuously in place.
 
-✨ New content appears here automatically.
-📌 This message is updated in place.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👑 <b>CINE UNIVERSE OFFICIAL</b>
+🎬 Your cinematic library, always moving.
+👤 Founder &amp; Developer: <b>Dinidu Induwara</b>
 
-━━━━━━━━━━━━━━━━━━━━
-
-🍿 <b>CINE UNIVERSE OFFICIAL</b>
-Your cinematic library, always moving.
-
-© 2026 <b>Cine Universe™</b>. All Rights Reserved.`;
+© 2026 <b>Cine Universe™</b> • All Rights Reserved.`;
 }
 async function telegram(method, payload) {
   if (!BOT_TOKEN) throw new Error('TELEGRAM_BOT_TOKEN is not configured.');
