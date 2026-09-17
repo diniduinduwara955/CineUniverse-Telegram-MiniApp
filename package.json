@@ -8,7 +8,7 @@
     "dev:web": "vite",
     "dev:api": "node server/server.js",
     "build": "vite build",
-    "start": "node --import ./server/live-content-database.js server/server.js",
+    "start": "node server/server.js",
     "preview": "vite preview",
     "check": "node --check server/server.js"
   },
