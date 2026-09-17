@@ -1,6 +1,6 @@
 {
   "name": "cine-universe-telegram-mini-app",
-  "version": "77.0.0",
+  "version": "102.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,9 +8,10 @@
     "dev:web": "vite",
     "dev:api": "node server/server.js",
     "build": "vite build",
-    "start": "node server/server.js",
+    "start": "node miniapp-server.js",
+    "start:api": "node server/server.js",
     "preview": "vite preview",
-    "check": "node --check server/server.js"
+    "check": "node --check server/server.js && node --check miniapp-server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
