@@ -115,31 +115,33 @@ function buildMessage(c, updated) {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         <b>${LIVE_MARKER}</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🟢 <b>ONLINE</b>  •  ⚡ <b>AUTO SYNC</b>  •  🔄 <b>LIVE</b>
+
+🟢 <b>ONLINE</b>&#160;&#160;•&#160;&#160;⚡ <b>AUTO SYNC</b>&#160;&#160;•&#160;&#160;🔄 <b>LIVE</b>
 
 🎞️ <b>LIBRARY CORE</b>
-🎬 Movies: <b>${c.movies}</b>  │  📺 Series: <b>${c.series}</b>  │  💎 Total: <b>${c.total}</b>
-📥 Delivery Maps: <b>${c.downloads}</b>  │  🎬 Quality: 4K • 1080P • 720P • 480P
+🎬 Movies: <b>${c.movies}</b>&#160;&#160;&#160;&#160;│&#160;&#160;&#160;&#160;📺 Series: <b>${c.series}</b>&#160;&#160;&#160;&#160;│&#160;&#160;&#160;&#160;💎 Total: <b>${c.total}</b>
+📥 Delivery Maps: <b>${c.downloads}</b>&#160;&#160;&#160;&#160;│&#160;&#160;&#160;&#160;🎬 Quality: <b>4K</b>&#160;•&#160;<b>1080P</b>&#160;•&#160;<b>720P</b>&#160;•&#160;<b>480P</b>
 
 🌍 <b>REGIONAL CINEMA MAP</b>
-🇱🇰 Sri Lanka <b>${c.sriLanka}</b>  │  🇮🇳 India <b>${c.indian}</b>  │  🇰🇷 Korea <b>${c.korean}</b>
-🇺🇸 USA <b>${c.usa}</b>  │  🇯🇵 Japan <b>${c.japan}</b>  │  🇨🇳 China <b>${c.china}</b>  │  🇬🇧 UK <b>${c.uk}</b>
+🇱🇰 Sri Lanka <b>${c.sriLanka}</b>&#160;&#160;&#160;&#160;🇮🇳 India <b>${c.indian}</b>&#160;&#160;&#160;&#160;🇰🇷 Korea <b>${c.korean}</b>
+🇺🇸 USA <b>${c.usa}</b>&#160;&#160;&#160;&#160;🇯🇵 Japan <b>${c.japan}</b>&#160;&#160;&#160;&#160;🇨🇳 China <b>${c.china}</b>
+🇬🇧 UK <b>${c.uk}</b>&#160;&#160;&#160;&#160;🌎 Worldwide Library
 
 🎨 <b>CURATED COLLECTIONS</b>
-🎨 Animation <b>${c.animation}</b>  │  🍥 Anime <b>${c.anime}</b>  │  🌎 Worldwide Library
+🎨 Animation <b>${c.animation}</b>&#160;&#160;&#160;&#160;🍥 Anime <b>${c.anime}</b>&#160;&#160;&#160;&#160;🌎 Worldwide Library
 
 🎥 <b>CINEMA PIPELINE</b>
-📥 Telegram → 🔎 Detection → 🗂️ Database → 🌐 Mini App → 🎬 Delivery
+📥 Telegram&#160;&#160;→&#160;&#160;🔎 Detection&#160;&#160;→&#160;&#160;🗂️ Database&#160;&#160;→&#160;&#160;🌐 Mini App&#160;&#160;→&#160;&#160;🎬 Delivery
 
 🛰️ <b>LIVE ENGINE</b>
-🟢 Core: ACTIVE  │  ☁️ State: DATABASE  │  📌 Message: PERSISTENT  │  ⚡ Feed: LIVE
-🔄 Sync: AUTOMATIC  │  🕐 Last Catalog Sync: <b>${formatUpdated(updated)}</b>
+🟢 Core: ACTIVE&#160;&#160;&#160;&#160;│&#160;&#160;&#160;&#160;☁️ State: DATABASE&#160;&#160;&#160;&#160;│&#160;&#160;&#160;&#160;📌 Message: PERSISTENT
+⚡ Feed: LIVE&#160;&#160;&#160;&#160;│&#160;&#160;&#160;&#160;🔄 Sync: AUTOMATIC&#160;&#160;&#160;&#160;│&#160;&#160;&#160;&#160;🕐 Last Sync: <b>${formatUpdated(updated)}</b>
 
 ✨ <b>LIVE FEED</b>
-🎞️ New titles enter automatically  │  📡 Data stays synchronized
-🔄 This message updates in place — <b>NO DUPLICATE FEED</b>
+🎞️ New titles enter automatically&#160;&#160;•&#160;&#160;📡 Data stays synchronized
+🔄 This message updates in place&#160;&#160;—&#160;&#160;<b>NO DUPLICATE FEED</b>
 
-👑 <b>CINE UNIVERSE OFFICIAL</b>  •  🎬 <i>Built for the cinema experience</i>
+👑 <b>CINE UNIVERSE OFFICIAL</b>&#160;&#160;•&#160;&#160;🎬 <i>Built for the cinema experience</i>
 👤 Founder &amp; Developer: <b>Dinidu Induwara</b>
 © 2026 <b>Cine Universe™</b> • All Rights Reserved`;
 }
