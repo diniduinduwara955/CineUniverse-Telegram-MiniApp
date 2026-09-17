@@ -1,6 +1,7 @@
 import 'dotenv/config';
 
 const BOT_TOKEN = String(process.env.TELEGRAM_BOT_TOKEN || '').trim();
+const POLL_START_DELAY_MS = Number(process.env.TELEGRAM_POLL_START_DELAY_MS || 20000);
 
 async function telegram(method, payload = {}) {
   if (!BOT_TOKEN) return null;
@@ -32,6 +33,16 @@ export async function prepareTelegramPolling() {
       console.log('[telegram-preflight] Webhook removed; polling mode is ready.');
     } else {
       console.log('[telegram-preflight] No webhook configured; polling mode is ready.');
+    }
+
+    // Render can briefly overlap the previous instance and the new instance
+    // during a deploy. Telegram allows only one active getUpdates consumer for
+    // a bot token, so give the previous instance time to shut down before the
+    // new polling listener starts. This targets HTTP 409 only and leaves the
+    // existing bot/group workflow unchanged.
+    if (POLL_START_DELAY_MS > 0) {
+      console.log(`[telegram-preflight] Waiting ${Math.round(POLL_START_DELAY_MS / 1000)}s before starting polling to avoid Telegram 409 overlap.`);
+      await new Promise(resolve => setTimeout(resolve, POLL_START_DELAY_MS));
     }
   } catch (error) {
     // Do not prevent the existing Cine Universe server from starting if Telegram
