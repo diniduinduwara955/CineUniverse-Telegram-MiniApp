@@ -15,6 +15,7 @@ const MINI_APP_URL = String(
 
 const rootDir = process.cwd();
 const distDir = path.join(rootDir, 'dist');
+const logoPath = path.join(rootDir, 'cine-universe-logo.jpg');
 
 function startApi() {
   const env = {
@@ -61,6 +62,56 @@ function bodyForRequest(req) {
   if (type.includes('application/x-www-form-urlencoded')) return new URLSearchParams(req.body).toString();
   if (Buffer.isBuffer(req.body)) return req.body;
   return typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+}
+
+async function fetchApiJson(pathname) {
+  const response = await fetch(`${API_ORIGIN}${pathname}`, {
+    headers: { Accept: 'application/json' }
+  });
+  const text = await response.text();
+  let data = null;
+  try { data = JSON.parse(text); } catch {}
+  return { response, data };
+}
+
+async function catalogWithFallback(req, res, primaryPath, fallbackPath, fallbackMediaType) {
+  try {
+    const primary = await fetchApiJson(primaryPath);
+    const primaryResults = Array.isArray(primary.data?.results) ? primary.data.results : [];
+
+    if (primary.response.ok && primaryResults.length > 0) {
+      res.status(primary.response.status).json(primary.data);
+      return;
+    }
+
+    const fallback = await fetchApiJson(fallbackPath);
+    if (fallback.response.ok && Array.isArray(fallback.data?.results)) {
+      const results = fallback.data.results.map(item => ({
+        ...item,
+        mediaType: item.mediaType || fallbackMediaType,
+        type: item.type || (fallbackMediaType === 'tv' ? 'TV Series' : 'Movie'),
+        published: false,
+        source: 'tmdb-fallback'
+      }));
+      res.json({
+        ok: true,
+        results,
+        source: 'tmdb-fallback',
+        notice: `No published ${fallbackMediaType === 'tv' ? 'TV series' : 'movies'} were found yet; showing live TMDB content.`
+      });
+      return;
+    }
+
+    if (primary.data) {
+      res.status(primary.response.status || 502).json(primary.data);
+      return;
+    }
+
+    res.status(502).json({ ok: false, error: 'Could not load catalog content.' });
+  } catch (error) {
+    console.error(`[miniapp-server] catalog fallback failed for ${primaryPath}:`, error.message);
+    res.status(502).json({ ok: false, error: 'Could not load catalog content.' });
+  }
 }
 
 async function proxyApi(req, res) {
@@ -132,6 +183,28 @@ app.use(express.urlencoded({ extended: false, limit: '2mb' }));
 app.get('/healthz', (_req, res) => {
   res.json({ ok: true, service: 'cine-universe-mini-app', api: API_ORIGIN });
 });
+
+// The existing logo lives at the repository root. Serve it from the combined
+// production server so the current React UI can keep using /cine-universe-logo.jpg.
+app.get('/cine-universe-logo.jpg', (_req, res) => {
+  if (!fs.existsSync(logoPath)) {
+    res.status(404).end();
+    return;
+  }
+  res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+  res.sendFile(logoPath);
+});
+
+// The React Mini App intentionally reads the Telegram-published catalog first.
+// On a fresh Render instance the runtime JSON files may be empty or not yet
+// present, so provide live TMDB content through the same endpoints as a safe
+// display fallback. Published/download mappings remain handled by the backend.
+app.get('/api/catalog', (req, res) =>
+  catalogWithFallback(req, res, '/api/catalog', '/api/movies', 'movie')
+);
+app.get('/api/tv-catalog', (req, res) =>
+  catalogWithFallback(req, res, '/api/tv-catalog', '/api/tv', 'tv')
+);
 
 app.use('/api', proxyApi);
 
