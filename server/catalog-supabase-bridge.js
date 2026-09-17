@@ -9,6 +9,7 @@ const TV_CATALOG_FILE = path.join(process.cwd(), 'server', 'published-tv-catalog
 const DOWNLOADS_FILE = path.join(process.cwd(), 'server', 'downloads.json');
 const SUPABASE_URL = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SUPABASE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+const WELCOME_IMAGE_URL = 'https://raw.githubusercontent.com/diniduinduwara955/CineUniverse-Telegram-MiniApp/main/public/cine-universe-bot-welcome.jpg';
 
 async function fetchRuntimeCatalog(key) {
   if (!SUPABASE_URL || !SUPABASE_KEY) return null;
@@ -112,6 +113,61 @@ globalThis.fetch = async function(input, init = {}) {
     const method = String(init?.method || (typeof input !== 'string' ? input?.method || 'GET' : 'GET')).toUpperCase();
     const body = init?.body;
 
+    if (method === 'POST' && /\/sendPhoto(?:\?|$)/.test(url) && body && typeof body.get === 'function' && typeof body.set === 'function') {
+      const oldCaption = String(body.get('caption') || '');
+
+      if (oldCaption.includes('Cine Universe Bot වෙත සාදරයෙන් පිළිගනිමු!')) {
+        const mentionMatch = oldCaption.match(/👋 ආයුබෝවන් (.+?)! ❤️/s);
+        const mention = mentionMatch?.[1] ? mentionMatch[1] : '<b>Friend</b>';
+        const welcomeText = [
+          '🎬 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀',
+          '',
+          `👋 𝐖𝐞𝐥𝐜𝐨𝐦𝐞, ${mention}!`,
+          '',
+          '🌌 𝙒𝙝𝙚𝙧𝙚 𝙚𝙫𝙚𝙧𝙮 𝙨𝙩𝙤𝙧𝙮',
+          '𝙛𝙞𝙣𝙙𝙨 𝙞𝙩𝙨 𝙨𝙘𝙧𝙚𝙚𝙣. ✨',
+          '',
+          '🎥 𝐌𝐎𝐕𝐈𝐄𝐒',
+          '📺 𝐓𝐕 𝐒𝐄𝐑𝐈𝐄𝐒',
+          '🔎 𝐒𝐌𝐀𝐑𝐓 𝐒𝐄𝐀𝐑𝐂𝐇',
+          '⭐ 𝐈𝐌𝐃𝐁 & 𝐓𝐌𝐃𝐁 𝐑𝐀𝐓𝐈𝐍𝐆𝐒',
+          '🎭 𝐆𝐄𝐍𝐑𝐄𝐒 & 𝐂𝐀𝐒𝐓',
+          '📝 𝐒𝐓𝐎𝐑𝐘 & 𝐃𝐄𝐓𝐀𝐈𝐋𝐒',
+          '📥 𝐀𝐕𝐀𝐈𝐋𝐀𝐁𝐋𝐄 𝐐𝐔𝐀𝐋𝐈𝐓𝐈𝐄𝐒',
+          '🎞️ 𝟒𝐊 • 𝟏𝟎𝟖𝟎𝐏 • 𝟕𝟐𝟎𝐏',
+          '',
+          '🚀 𝐅𝐀𝐒𝐓 𝐃𝐈𝐒𝐂𝐎𝐕𝐄𝐑𝐘',
+          '🔍 Movie එකක හෝ Series එකක නම type කරන්න.',
+          '🎬 Details → Quality → Available File',
+          '',
+          '✨ 𝑺𝒆𝒂𝒓𝒄. 𝑫𝒊𝒔𝒄𝒐𝒗𝒆𝒓. 𝑬𝒙𝒑𝒆𝒓𝒊𝒆𝒏𝒄𝒆.',
+          '',
+          '🍿 𝐅𝐢𝐧𝐝 𝐢𝐭.',
+          '🎬 𝐄𝐱𝐩𝐥𝐨𝐫𝐞 𝐢𝐭.',
+          '🌌 𝐋𝐢𝐯𝐞 𝐭𝐡𝐞 𝐬𝐭𝐨𝐫𝐲.',
+          '',
+          '💙 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀',
+          '𝑪𝒓𝒆𝒂𝒕𝒆𝒅 𝒃𝒚 𝐃𝐢𝐧𝐢𝐝𝐮 𝐈𝐧𝐝𝐮𝐰𝐚𝐫𝐚',
+          '',
+          '© 2026 𝘾𝙞𝙣𝙚 𝙐𝙣𝙞𝙫𝙚𝙧𝙨𝙚'
+        ].join('\n');
+
+        const keyboard = {
+          inline_keyboard: [
+            [{ text: '🎬 𝐂𝐢𝐧𝐞 𝐔𝐧𝐢𝐯𝐞𝐫𝐬𝐞 | 𝐑𝐞𝐪𝐮𝐞𝐬𝐭 𝐇𝐮𝐛', url: 'https://t.me/dinidupitigala2003' }],
+            [{ text: '🔥𝐂𝐢𝐧𝐞 𝐔𝐧𝐢𝐯𝐞𝐫𝐬𝐞 | 𝐄𝐧𝐭𝐞𝐫𝐭𝐚𝐢𝐧𝐦𝐞𝐧𝐭 𝐇𝐮𝐛', url: 'https://t.me/dinidu20030304' }]
+          ]
+        };
+
+        body.set('photo', WELCOME_IMAGE_URL);
+        body.set('caption', welcomeText);
+        body.set('parse_mode', 'HTML');
+        body.set('reply_markup', JSON.stringify(keyboard));
+
+        return originalFetch(input, { ...init, body });
+      }
+    }
+
     if (method === 'POST' && /\/sendMessage(?:\?|$)/.test(url) && typeof body === 'string') {
       const payload = JSON.parse(body);
       const oldNotice = String(payload?.text || '');
@@ -146,11 +202,11 @@ globalThis.fetch = async function(input, init = {}) {
       }
     }
   } catch (error) {
-    // Never let notice styling interfere with normal Telegram/Supabase traffic.
-    console.warn('[catalog-bridge] FILE NOTICE style rewrite skipped:', error.message || error);
+    // Never let notice/welcome styling interfere with normal Telegram/Supabase traffic.
+    console.warn('[catalog-bridge] Telegram message rewrite skipped:', error.message || error);
   }
 
   return originalFetch(input, init);
 };
 
-console.log('[catalog-bridge] Supabase catalog + downloads bridge loaded; local writes + new download sync + future FILE NOTICE style enabled.');
+console.log('[catalog-bridge] Supabase catalog + downloads bridge loaded; local writes + new download sync + future FILE NOTICE + private welcome styling enabled.');
