@@ -84,11 +84,13 @@ function hasCountry(item, codes) {
   const values = countries(item);
   return values.some(value => codes.some(code => value === code || value.includes(code)));
 }
-function counts(movies, series) {
+function counts(movies, series, downloads) {
   const all = [...movies, ...series];
   return {
     movies: movies.length,
     series: series.length,
+    total: all.length,
+    downloads: downloads.length,
     indian: all.filter(isIndian).length,
     korean: all.filter(isKorean).length,
     animation: all.filter(isAnimation).length,
@@ -97,8 +99,7 @@ function counts(movies, series) {
     usa: all.filter(item => hasCountry(item, ['us','usa','united states'])).length,
     japan: all.filter(item => hasCountry(item, ['jp','japan'])).length,
     china: all.filter(item => hasCountry(item, ['cn','china'])).length,
-    uk: all.filter(item => hasCountry(item, ['gb','uk','united kingdom'])).length,
-    total: all.length
+    uk: all.filter(item => hasCountry(item, ['gb','uk','united kingdom'])).length
   };
 }
 function lastUpdated(movies, series) {
@@ -109,38 +110,38 @@ function formatUpdated(date) {
   return new Intl.DateTimeFormat('en-LK', { timeZone:'Asia/Colombo', year:'numeric', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }).format(date);
 }
 function buildMessage(c, updated) {
-  return `🎬 <b>CINE UNIVERSE™</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        <b>${LIVE_MARKER}</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🟢 ONLINE  •  ⚡ AUTO SYNC  •  🔄 REAL-TIME
-
-📚 <b>LIBRARY</b>
-🎞️ Movies: <b>${c.movies}</b>  |  📺 TV Series: <b>${c.series}</b>  |  💎 Total: <b>${c.total}</b>
-📥 Downloads: <b>ACTIVE</b>
-
-🌍 <b>COLLECTIONS</b>
-🇱🇰 Sri Lanka: <b>${c.sriLanka}</b>  |  🇮🇳 India: <b>${c.indian}</b>  |  🇰🇷 Korea: <b>${c.korean}</b>
-🇺🇸 USA: <b>${c.usa}</b>  |  🇯🇵 Japan: <b>${c.japan}</b>  |  🇨🇳 China: <b>${c.china}</b>  |  🇬🇧 UK: <b>${c.uk}</b>
-🌎 Worldwide Library
-
-🎨 <b>SPECIAL COLLECTIONS</b>
-🎨 Animation: <b>${c.animation}</b>  |  🍥 Anime: <b>${c.anime}</b>
-
-📡 <b>CONTENT FLOW</b>
-Telegram → Database → Mini App → Delivery
-
-📊 <b>DATABASE</b>
-🟢 ACTIVE  |  📌 PERSISTENT  |  🔄 AUTOMATIC
-🕐 Last Sync: <b>${formatUpdated(updated)}</b>
-
-✨ New titles are added automatically.
-📌 This message updates in place.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-👑 <b>CINE UNIVERSE OFFICIAL</b>
+  return `╭──────────────────────────────────────╮
+│        🎬 <b>𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘™</b>        │
+│          𝗟𝗜𝗩𝗘 𝗖𝗜𝗡𝗘𝗠𝗔 𝗖𝗢𝗥𝗘          │
+╰──────────────────────────────────────╯
+        📡 <b>${LIVE_MARKER}</b>
+      🟢 <b>ONLINE</b> • ⚡ <b>AUTO SYNC</b> • 🔄 <b>LIVE</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎞️ <b>LIBRARY CORE</b>
+🎬 Movies: <b>${c.movies}</b>   │   📺 Series: <b>${c.series}</b>   │   💎 Total: <b>${c.total}</b>
+📥 Delivery Maps: <b>${c.downloads}</b>   │   🎬 Quality: 4K • 1080P • 720P • 480P
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🌍 <b>REGIONAL CINEMA MAP</b>
+🇱🇰 Sri Lanka <b>${c.sriLanka}</b>  │  🇮🇳 India <b>${c.indian}</b>  │  🇰🇷 Korea <b>${c.korean}</b>
+🇺🇸 USA <b>${c.usa}</b>  │  🇯🇵 Japan <b>${c.japan}</b>  │  🇨🇳 China <b>${c.china}</b>  │  🇬🇧 UK <b>${c.uk}</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎨 <b>CURATED COLLECTIONS</b>
+🎨 Animation <b>${c.animation}</b>  │  🍥 Anime <b>${c.anime}</b>  │  🌎 Worldwide Library
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎥 <b>CINEMA PIPELINE</b>
+📥 Telegram → 🔎 Detection → 🗂️ Database → 🌐 Mini App → 🎬 Delivery
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🛰️ <b>LIVE ENGINE</b>
+🟢 Core: ACTIVE  │  ☁️ State: DATABASE  │  📌 Message: PERSISTENT  │  ⚡ Feed: LIVE
+🔄 Sync: AUTOMATIC  │  🕐 Last Catalog Sync: <b>${formatUpdated(updated)}</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✨ <b>LIVE FEED</b>
+🎞️ New titles enter automatically  │  📡 Data stays synchronized
+🔄 This message updates in place — <b>NO DUPLICATE FEED</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👑 <b>CINE UNIVERSE OFFICIAL</b>  •  🎬 <i>Built for the cinema experience</i>
 👤 Founder &amp; Developer: <b>Dinidu Induwara</b>
-© 2026 <b>Cine Universe™</b> • All Rights Reserved.`;
+© 2026 <b>Cine Universe™</b> • All Rights Reserved`;
 }
 async function telegram(method, payload) {
   if (!BOT_TOKEN) throw new Error('TELEGRAM_BOT_TOKEN is not configured.');
@@ -176,10 +177,14 @@ async function getPinnedLiveMessage() {
 }
 async function refresh() {
   if (!BOT_TOKEN || !LIVE_CHANNEL_ID) return;
-  const [movies, series] = await Promise.all([loadCatalog('movieCatalog', MOVIE_FILE), loadCatalog('tvCatalog', TV_FILE)]);
-  const c = counts(movies, series);
+  const [movies, series, downloadsPayload] = await Promise.all([
+    loadCatalog('movieCatalog', MOVIE_FILE),
+    loadCatalog('tvCatalog', TV_FILE),
+    readRuntimeState('downloads')
+  ]);
+  const c = counts(movies, series, items(downloadsPayload));
   const message = buildMessage(c, lastUpdated(movies, series));
-  console.log(`[live-content] Database counts: movies=${c.movies}, series=${c.series}, total=${c.total}`);
+  console.log(`[live-content] Database counts: movies=${c.movies}, series=${c.series}, downloads=${c.downloads}, total=${c.total}`);
 
   const saved = await messageId();
   const pinned = await getPinnedLiveMessage();
