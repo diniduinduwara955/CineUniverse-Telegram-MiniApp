@@ -49,9 +49,14 @@ async function saveRuntimeState(key, payload) {
     console.warn(`[live-content] Supabase ${key} write failed:`, err.message || err);
   }
 }
+
+// Published local catalogs are authoritative for the live database.
+// Supabase remains the fallback so this change does not modify or remove old data.
 async function loadCatalog(remoteKey, localFile) {
+  const local = await readLocal(localFile);
+  if (local.length > 0) return local;
   const remote = await readRuntimeState(remoteKey);
-  return Array.isArray(remote) && remote.length > 0 ? remote : readLocal(localFile);
+  return items(remote);
 }
 
 function text(v) { return String(v ?? '').trim().toLowerCase(); }
@@ -78,6 +83,10 @@ function qualityCounts(downloads) {
   }
   return result;
 }
+const DIGITS = ['𝟬','𝟭','𝟮','𝟯','𝟰','𝟱','𝟲','𝟳','𝟴','𝟵'];
+function fancyNumber(value, width = 3) {
+  return String(value).padStart(width, '0').split('').map(digit => DIGITS[Number(digit)]).join('');
+}
 function formatDate(date = new Date()) {
   return new Intl.DateTimeFormat('en-LK', { timeZone: 'Asia/Colombo', year: 'numeric', month: 'long', day: '2-digit' }).format(date);
 }
@@ -91,18 +100,109 @@ function latestLines(list) {
   return latest(list).map((item, index) => `${String(index + 1).padStart(2, '0')}  •  𝗠𝗔𝗜𝗡  •  ${titleOf(item)}`).join('\n') || '— 𝗡𝗼 𝗻𝗲𝘄 𝗰𝗼𝗻𝘁𝗲𝗻𝘁 —';
 }
 function buildMovies(movies, now) {
-  return `🎬 𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘\n        𝙇𝙄𝙑𝙀 𝙈𝙊𝙑𝙄𝙀 𝘿𝘼𝙏𝘼𝘽𝘼𝙎𝙀\n\n━━━━━━━━━━━━━━━━━━━━\n\n🎞️ 𝙈𝙊𝙑𝙄𝙀𝙎\n\n𝗧𝗢𝗧𝗔𝗟 𝗠𝗢𝗩𝗜𝗘𝗦  ·  𝟬${movies.length}\n\n✦ 𝙇𝘼𝙏𝙀𝙎𝙏 𝘼𝘿𝘿𝙀𝘿\n\n${latestLines(movies)}\n\n━━━━━━━━━━━━━━━━━━━━\n\n🟢 𝗗𝗔𝗧𝗔𝗕𝗔𝗦𝗘  ·  𝗟𝗜𝗩𝗘\n🔄 𝘼𝙐𝙏𝙊 𝙐𝙋𝘿𝘼𝙏𝙀  ·  𝗘𝗡𝗔𝗕𝗟𝗘𝗗\n\n🕒 𝙇𝘼𝙎𝙏 𝙐𝙋𝘿𝘼𝙏𝙀𝘿\n${stamp(now)}\n\n💙 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀\n© 𝟮𝟬𝟮𝟲 𝗖𝗶𝗻𝗲 𝗨𝗻𝗶𝘃𝗲𝗿𝘀𝗲`;
+  return `🎬 𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘
+        𝙇𝙄𝙑𝙀 𝙈𝙊𝙑𝙄𝙀 𝘿𝘼𝙏𝘼𝘽𝘼𝙎𝙀
+
+━━━━━━━━━━━━━━━━━━━━
+
+🎞️ 𝙈𝙊𝙑𝙄𝙀𝙎
+
+𝗧𝗢𝗧𝗔𝗟 𝗠𝗢𝗩𝗜𝗘𝗦  ·  ${fancyNumber(movies.length)}
+
+✦ 𝙇𝘼𝙏𝙀𝙎𝙏 𝘼𝘿𝘿𝙀𝘿
+
+${latestLines(movies)}
+
+━━━━━━━━━━━━━━━━━━━━
+
+🟢 𝗗𝗔𝗧𝗔𝗕𝗔𝗦𝗘  ·  𝗟𝗜𝗩𝗘
+🔄 𝘼𝙐𝙏𝙊 𝙐𝙋𝘿𝘼𝙏𝙀  ·  𝗘𝗡𝗔𝗕𝗟𝗘𝗗
+
+🕒 𝙇𝘼𝙎𝙏 𝙐𝙋𝘿𝘼𝙏𝙀𝘿
+${stamp(now)}
+
+💙 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀
+© 𝟮𝟬𝟮𝟲 𝗖𝗶𝗻𝗲 𝗨𝗻𝗶𝘃𝗲𝗿𝘀𝗲`;
 }
 function buildSeries(series, now) {
-  return `📺 𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘\n        𝙇𝙄𝙑𝙀 𝙎𝙀𝙍𝙄𝙀𝙎 𝘿𝘼𝙏𝘼𝘽𝘼𝙎𝙀\n\n━━━━━━━━━━━━━━━━━━━━\n\n📺 𝙏𝙑 𝙎𝙀𝙍𝙄𝙀𝙎\n\n𝗧𝗢𝗧𝗔𝗟 𝗦𝗘𝗥𝗜𝗘𝗦  ·  𝟬${series.length}\n\n✦ 𝙇𝘼𝙏𝙀𝙎𝙏 𝘼𝘿𝘿𝙀𝘿\n\n${latestLines(series)}\n\n━━━━━━━━━━━━━━━━━━━━\n\n🟢 𝗗𝗔𝗧𝗔𝗕𝗔𝗦𝗘  ·  𝗟𝗜𝗩𝗘\n🔄 𝘼𝙐𝙏𝙊 𝙐𝙋𝘿𝘼𝙏𝙀  ·  𝗘𝗡𝗔𝗕𝗟𝗘𝗗\n\n🕒 𝙇𝘼𝙎𝙏 𝙐𝙋𝘿𝘼𝙏𝙀𝘿\n${stamp(now)}\n\n💙 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀\n© 𝟮𝟬𝟮𝟲 𝗖𝗶𝗻𝗲 𝗨𝗻𝗶𝘃𝗲𝗿𝘀𝗲`;
+  return `📺 𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘
+        𝙇𝙄𝙑𝙀 𝙎𝙀𝙍𝙄𝙀𝙎 𝘿𝘼𝙏𝘼𝘽𝘼𝙎𝙀
+
+━━━━━━━━━━━━━━━━━━━━
+
+📺 𝙏𝙑 𝙎𝙀𝙍𝙄𝙀𝙎
+
+𝗧𝗢𝗧𝗔𝗟 𝗦𝗘𝗥𝗜𝗘𝗦  ·  ${fancyNumber(series.length)}
+
+✦ 𝙇𝘼𝙏𝙀𝙎𝙏 𝘼𝘿𝘿𝙀𝘿
+
+${latestLines(series)}
+
+━━━━━━━━━━━━━━━━━━━━
+
+🟢 𝗗𝗔𝗧𝗔𝗕𝗔𝗦𝗘  ·  𝗟𝗜𝗩𝗘
+🔄 𝘼𝙐𝙏𝙊 𝙐𝙋𝘿𝘼𝙏𝙀  ·  𝗘𝗡𝘼𝘽𝙇𝙀𝘿
+
+🕒 𝙇𝘼𝙎𝙏 𝙐𝙋𝘿𝘼𝙏𝙀𝘿
+${stamp(now)}
+
+💙 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀
+© 𝟮𝟬𝟮𝟲 𝗖𝗶𝗻𝗲 𝗨𝗻𝗶𝘃𝗲𝗿𝘀𝗲`;
 }
 function buildDownloads(downloads, now) {
   const q = qualityCounts(downloads);
-  return `📥 𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘\n        𝙇𝙄𝙑𝙀 𝘿𝙊𝙒𝙉𝙇𝙊𝘼𝘿 𝘿𝘼𝙏𝘼𝘽𝘼𝙎𝙀\n\n━━━━━━━━━━━━━━━━━━━━\n\n📥 𝙁𝙄𝙇𝙀 𝙎𝙏𝘼𝙏𝙎\n\n💎 𝟰𝗞 / 𝗨𝗛𝗗   ·  ${String(q['4K / UHD']).padStart(3, '0')}\n🔥 𝟭𝟬𝟴𝟬𝗣      ·  ${String(q['1080P']).padStart(3, '0')}\n⚡ 𝟳𝟮𝟬𝗣       ·  ${String(q['720P']).padStart(3, '0')}\n📱 𝟰𝟴𝟬𝗣       ·  ${String(q['480P']).padStart(3, '0')}\n\n𝗧𝗢𝗧𝗔𝗟 𝗙𝗜𝗟𝗘𝗦  ·  ${downloads.length}\n\n━━━━━━━━━━━━━━━━━━━━\n\n🟢 𝗗𝗔𝗧𝗔𝗕𝗔𝗦𝗘  ·  𝗟𝗜𝗩𝗘\n🔄 𝘼𝙐𝙏𝙊 𝙐𝙋𝘿𝘼𝙏𝙀  ·  𝗘𝗡𝗔𝗕𝗟𝗘𝗗\n\n🕒 𝙇𝘼𝙎𝙏 𝙐𝙋𝘿𝘼𝙏𝙀𝘿\n${stamp(now)}\n\n💙 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀\n© 𝟮𝟬𝟮𝟲 𝗖𝗶𝗻𝗲 𝗨𝗻𝗶𝘃𝗲𝗿𝘀𝗲`;
+  return `📥 𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘
+        𝙇𝙄𝙑𝙀 𝘿𝙊𝙒𝙉𝙇𝙊𝘼𝘿 𝘿𝘼𝙏𝘼𝘽𝘼𝙎𝙀
+
+━━━━━━━━━━━━━━━━━━━━
+
+📥 𝙁𝙄𝙇𝙀 𝙎𝙏𝘼𝙏𝙎
+
+💎 𝟰𝗞 / 𝗨𝗛𝗗   ·  ${fancyNumber(q['4K / UHD'])}
+🔥 𝟭𝟬𝟴𝟬𝗣      ·  ${fancyNumber(q['1080P'])}
+⚡ 𝟳𝟮𝟬𝗣       ·  ${fancyNumber(q['720P'])}
+📱 𝟰𝟴𝟬𝗣       ·  ${fancyNumber(q['480P'])}
+
+𝗧𝗢𝗧𝗔𝗟 𝗙𝗜𝗟𝗘𝗦  ·  ${fancyNumber(downloads.length)}
+
+━━━━━━━━━━━━━━━━━━━━
+
+🟢 𝗗𝗔𝗧𝗔𝗕𝗔𝗦𝗘  ·  𝗟𝗜𝗩𝗘
+🔄 𝘼𝙐𝙏𝙊 𝙐𝙋𝘿𝘼𝙏𝙀  ·  𝗘𝗡𝗔𝗕𝗟𝗘𝗗
+
+🕒 𝙇𝘼𝙎𝙏 𝙐𝙋𝘿𝘼𝙏𝙀𝘿
+${stamp(now)}
+
+💙 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝗥𝗦𝗘
+© 𝟮𝟬𝟮𝟲 𝗖𝗶𝗻𝗲 𝗨𝗻𝗶𝘃𝗲𝗿𝘀𝗲`;
 }
 function buildOverall(movies, series, downloads, now) {
   const total = movies.length + series.length;
-  return `🌐 𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘\n        𝙇𝙄𝙑𝙀 𝘾𝙊𝙉𝙏𝙀𝙉𝙏 𝙎𝙏𝘼𝙏𝙐𝙎\n\n━━━━━━━━━━━━━━━━━━━━\n\n🎬 𝗠𝗢𝗩𝗜𝗘𝗦       ·  ${movies.length}\n📺 𝗧𝗩 𝗦𝗘𝗥𝗜𝗘𝗦    ·  ${series.length}\n📥 𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗦   ·  ${downloads.length}\n\n𝗧𝗢𝗧𝗔𝗟 𝗧𝗜𝗧𝗟𝗘𝗦  ·  ${total}\n\n━━━━━━━━━━━━━━━━━━━━\n\n🟢 𝗦𝗬𝗦𝗧𝗘𝗠  ·  𝗢𝗡𝗟𝗜𝗡𝗘\n🔄 𝗔𝗨𝗧𝗢 𝗦𝗬𝗡𝗖  ·  𝗘𝗡𝗔𝗕𝗟𝗘𝗗\n⚡ 𝗙𝗘𝗘𝗗      ·  𝗟𝗜𝗩𝗘\n📌 𝗠𝗘𝗦𝗦𝗔𝗚𝗘𝗦   ·  𝟬𝟰 𝗣𝗘𝗥𝗦𝗜𝗦𝗧𝗘𝗡𝗧\n\n━━━━━━━━━━━━━━━━━━━━\n\n🕒 𝙇𝘼𝙎𝙏 𝙐𝙋𝘿𝘼𝙏𝙀𝘿\n${stamp(now)}\n\n💙 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀\n© 𝟮𝟬𝟮𝟲 𝗖𝗶𝗻𝗲 𝗨𝗻𝗶𝘃𝗲𝗿𝘀𝗲`;
+  return `🌐 𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘
+        𝙇𝙄𝙑𝙀 𝘾𝙊𝙉𝙏𝙀𝙉𝙏 𝙎𝙏𝘼𝙏𝙐𝙎
+
+━━━━━━━━━━━━━━━━━━━━
+
+🎬 𝗠𝗢𝗩𝗜𝗘𝗦       ·  ${fancyNumber(movies.length)}
+📺 𝗧𝗩 𝗦𝗘𝗥𝗜𝗘𝗦    ·  ${fancyNumber(series.length)}
+📥 𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗦   ·  ${fancyNumber(downloads.length)}
+
+𝗧𝗢𝗧𝗔𝗟 𝗧𝗜𝗧𝗟𝗘𝗦  ·  ${fancyNumber(total)}
+
+━━━━━━━━━━━━━━━━━━━━
+
+🟢 𝗦𝗬𝗦𝗧𝗘𝗠  ·  𝗢𝗡𝗟𝗜𝗡𝗘
+🔄 𝗔𝗨𝗧𝗢 𝗦𝗬𝗡𝗖  ·  𝗘𝗡𝗔𝗕𝗟𝗘𝗗
+⚡ 𝗙𝗘𝗘𝗗      ·  𝗟𝗜𝗩𝗘
+📌 𝗠𝗘𝗦𝗦𝗔𝗚𝗘𝗦   ·  𝟬𝟰 𝗣𝗘𝗥𝗦𝗜𝗦𝗧𝗘𝗡𝗧
+
+━━━━━━━━━━━━━━━━━━━━
+
+🕒 𝙇𝘼𝙎𝙏 𝙐𝙋𝘿𝘼𝙏𝙀𝘿
+${stamp(now)}
+
+💙 𝘾𝙄𝙉𝙀 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘
+© 𝟮𝟬𝟮𝟲 𝗖𝗶𝗻𝗲 𝗨𝗻𝗶𝘃𝗲𝗿𝘀𝗲`;
 }
 
 async function telegram(method, payload) {
