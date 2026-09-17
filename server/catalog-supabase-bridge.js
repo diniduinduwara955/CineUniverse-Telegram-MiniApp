@@ -3,6 +3,7 @@ import path from 'node:path';
 
 const originalReadFile = fs.readFile.bind(fs);
 const originalWriteFile = fs.writeFile.bind(fs);
+const originalFetch = globalThis.fetch.bind(globalThis);
 const CATALOG_FILE = path.join(process.cwd(), 'server', 'published-catalog.json');
 const TV_CATALOG_FILE = path.join(process.cwd(), 'server', 'published-tv-catalog.json');
 const DOWNLOADS_FILE = path.join(process.cwd(), 'server', 'downloads.json');
@@ -12,7 +13,7 @@ const SUPABASE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 async function fetchRuntimeCatalog(key) {
   if (!SUPABASE_URL || !SUPABASE_KEY) return null;
   const url = `${SUPABASE_URL}/rest/v1/cine_runtime_state?key=eq.${encodeURIComponent(key)}&select=payload&limit=1`;
-  const response = await fetch(url, {
+  const response = await originalFetch(url, {
     headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
   });
   if (!response.ok) throw new Error(`Supabase ${key} HTTP ${response.status}`);
@@ -23,7 +24,7 @@ async function fetchRuntimeCatalog(key) {
 async function saveRuntimeCatalog(key, payload) {
   if (!SUPABASE_URL || !SUPABASE_KEY) return;
   const url = `${SUPABASE_URL}/rest/v1/cine_runtime_state?on_conflict=key`;
-  const response = await fetch(url, {
+  const response = await originalFetch(url, {
     method: 'POST',
     headers: {
       apikey: SUPABASE_KEY,
@@ -103,4 +104,53 @@ fs.writeFile = async function(file, data, options) {
   return result;
 };
 
-console.log('[catalog-bridge] Supabase catalog + downloads bridge loaded; local writes + new download sync enabled.');
+// Future FILE NOTICE messages only: keep all existing Telegram messages intact,
+// but replace the old notice payload with the new cinematic notice and channel button.
+globalThis.fetch = async function(input, init = {}) {
+  try {
+    const url = String(typeof input === 'string' ? input : input?.url || '');
+    const method = String(init?.method || (typeof input !== 'string' ? input?.method || 'GET' : 'GET')).toUpperCase();
+    const body = init?.body;
+
+    if (method === 'POST' && /\/sendMessage(?:\?|$)/.test(url) && typeof body === 'string') {
+      const payload = JSON.parse(body);
+      const oldNotice = String(payload?.text || '');
+
+      if (oldNotice.includes('<b>FILE NOTICE</b>') || oldNotice.includes('ඔයාට ලැබුණු Movie file එක තාවකාලිකයි')) {
+        payload.text = [
+          '🚨 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀 𝘼𝙇𝙀𝙍𝙏',
+          '',
+          '📥 𝘿𝙊𝙒𝙉𝙇𝙊𝘼𝘿 𝘾𝙊𝙈𝙋𝙇𝙀𝙏𝙀 ✅',
+          '',
+          '📁 ඔයාගේ File එක ලැබුණා.',
+          '',
+          '🕒 පැය 48කට පසු Auto Delete වේ.',
+          '🔄 නැවත ඕනේ නම් Group එකෙන් Movie එක Request කරන්න.',
+          '',
+          '⚠️ 𝘾𝙊𝙋𝙔𝙍𝙄𝙂𝙃𝙏',
+          'මෙම Content හි සියලුම හිමිකම්',
+          'අදාළ Copyright හිමිකරුවන් සතුය.',
+          '',
+          '💙 𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀',
+          '© 2026 Cine Universe'
+        ].join('\\n');
+        payload.reply_markup = {
+          inline_keyboard: [[
+            {
+              text: '🔥𝐂𝐢𝐧𝐞 𝐔𝐧𝐢𝐯𝐞𝐫𝐬𝐞 | 𝐄𝐧𝐭𝐞𝐫𝐭𝐚𝐢𝐧𝐦𝐞𝐧𝐭 𝐇𝐮𝐛',
+              url: 'https://t.me/+xXNo5N_k9aIxMTU9'
+            }
+          ]]
+        };
+        return originalFetch(input, { ...init, body: JSON.stringify(payload) });
+      }
+    }
+  } catch (error) {
+    // Never let notice styling interfere with normal Telegram/Supabase traffic.
+    console.warn('[catalog-bridge] FILE NOTICE style rewrite skipped:', error.message || error);
+  }
+
+  return originalFetch(input, init);
+};
+
+console.log('[catalog-bridge] Supabase catalog + downloads bridge loaded; local writes + new download sync + future FILE NOTICE style enabled.');
