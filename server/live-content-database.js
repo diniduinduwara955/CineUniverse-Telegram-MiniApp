@@ -3,8 +3,18 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 const LIVE_CHANNEL_ID = String(process.env.LIVE_CONTENT_CHANNEL_CHAT_ID || '-1003965046804').trim();
-const CATALOG_FILE = path.join(process.cwd(), 'server', 'published-catalog.json');
-const TV_CATALOG_FILE = path.join(process.cwd(), 'server', 'published-tv-catalog.json');
+
+// The existing Cine Universe backend stores its live catalogs under /server.
+// Root-level catalogs are kept only as a safe fallback for deployments that
+// have the seed catalog but have not yet created the runtime /server files.
+const CATALOG_FILES = [
+  path.join(process.cwd(), 'server', 'published-catalog.json'),
+  path.join(process.cwd(), 'published-catalog.json')
+];
+const TV_CATALOG_FILES = [
+  path.join(process.cwd(), 'server', 'published-tv-catalog.json'),
+  path.join(process.cwd(), 'published-tv-catalog.json')
+];
 const MESSAGE_FILE = path.join(process.cwd(), 'server', 'live-content-message.json');
 const REFRESH_MS = Number(process.env.LIVE_CONTENT_REFRESH_MS || 15000);
 const BOT_TOKEN = String(process.env.TELEGRAM_BOT_TOKEN || '').trim();
@@ -15,13 +25,22 @@ async function readJson(file) {
   try {
     return JSON.parse(await fs.readFile(file, 'utf8'));
   } catch {
-    return {};
+    return null;
   }
 }
 
 function itemsFromCatalog(value) {
   if (Array.isArray(value)) return value;
   if (value && typeof value === 'object') return Object.values(value);
+  return [];
+}
+
+async function readCatalog(candidates) {
+  for (const file of candidates) {
+    const value = await readJson(file);
+    const items = itemsFromCatalog(value);
+    if (items.length > 0) return items;
+  }
   return [];
 }
 
@@ -57,9 +76,15 @@ function countriesOf(item) {
     ...(Array.isArray(item?.countries) ? item.countries : []),
     item?.country,
     item?.origin_country,
-    ...(Array.isArray(item?.origin_country) ? item.origin_country : [])
+    ...(Array.isArray(item?.origin_country) ? item.origin_country : []),
+    item?.originalCountry,
+    item?.originCountry,
+    item?.countryCode
   ];
-  return values.map(x => typeof x === 'object' ? x?.iso_3166_1 || x?.name : x).filter(Boolean).map(text);
+  return values.flatMap(x => Array.isArray(x) ? x : [x])
+    .map(x => typeof x === 'object' ? x?.iso_3166_1 || x?.name : x)
+    .filter(Boolean)
+    .map(text);
 }
 
 function isIndian(item) {
@@ -104,6 +129,15 @@ function countData(movies, series) {
   };
 }
 
+function latestCatalogUpdate(movies, series) {
+  const dates = [...movies, ...series]
+    .map(item => item?.updatedAt)
+    .map(value => value ? new Date(value) : null)
+    .filter(date => date && Number.isFinite(date.getTime()));
+  if (!dates.length) return new Date();
+  return new Date(Math.max(...dates.map(date => date.getTime())));
+}
+
 function formatUpdated(date = new Date()) {
   return new Intl.DateTimeFormat('en-LK', {
     timeZone: 'Asia/Colombo',
@@ -112,7 +146,7 @@ function formatUpdated(date = new Date()) {
   }).format(date).replace(',', '');
 }
 
-function buildMessage(counts) {
+function buildMessage(counts, lastUpdated) {
   return `🎬 𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘™
 ━━━━━━━━━━━━━━━━━━━━
 
@@ -145,7 +179,7 @@ function buildMessage(counts) {
 𝗟𝗜𝗩𝗘 • 𝗔𝗖𝗧𝗜𝗩𝗘 • 𝗨𝗣𝗗𝗔𝗧𝗜𝗡𝗚
 
 🕐 𝗟𝗔𝗦𝗧 𝗨𝗣𝗗𝗔𝗧𝗘𝗗
-${formatUpdated()}
+${formatUpdated(lastUpdated)}
 
 ━━━━━━━━━━━━━━━━━━━━
 
@@ -193,11 +227,16 @@ async function saveMessageId(messageId) {
 async function refreshLiveMessage() {
   if (!BOT_TOKEN || !LIVE_CHANNEL_ID) return;
 
-  const movies = itemsFromCatalog(await readJson(CATALOG_FILE));
-  const series = itemsFromCatalog(await readJson(TV_CATALOG_FILE));
+  // Read the same catalog files used by the existing Cine Universe backend.
+  // Nothing in the existing movie/TV upload flow is modified here.
+  const movies = await readCatalog(CATALOG_FILES);
+  const series = await readCatalog(TV_CATALOG_FILES);
   const counts = countData(movies, series);
-  const message = buildMessage(counts);
+  const lastUpdated = latestCatalogUpdate(movies, series);
+  const message = buildMessage(counts, lastUpdated);
   let messageId = await loadMessageId();
+
+  console.log(`[live-content] Database counts: movies=${counts.movies}, series=${counts.series}, total=${counts.total}`);
 
   if (messageId) {
     try {
@@ -209,6 +248,10 @@ async function refreshLiveMessage() {
       });
       return;
     } catch (error) {
+      // Telegram returns this when the database values have not changed.
+      // It is a successful no-op; do NOT create another message.
+      if (/message is not modified/i.test(String(error?.message || error))) return;
+
       console.warn('[live-content] Existing message could not be edited; creating a new one:', error.message || error);
       messageId = null;
     }
