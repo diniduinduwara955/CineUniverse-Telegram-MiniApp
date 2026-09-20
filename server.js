@@ -5,6 +5,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { handleCineUniverseWelcome } from './cine-universe-welcome.mjs';
+import { registerManualMovieAdmin } from './server/manual-movie-admin.mjs';
 
 const app = express();
 const PORT = Number(process.env.PORT || 8787);
@@ -1816,6 +1817,16 @@ async function startUnifiedTelegramListener() {
   }
 }
 restoreFileExpiryJobs().catch(err=>console.error('[telegram-listener] expiry restore failed:',err));
+registerManualMovieAdmin({
+  app,
+  requireAdmin,
+  loadCatalog,
+  saveCatalog,
+  loadDownloadMap,
+  movieDetailsWithCredits,
+  getImdbMetadata,
+  buildCatalogEntry
+});
 startUnifiedTelegramListener().catch(err => console.error('[telegram-listener] startup error:', err));
 
 app.listen(PORT, '0.0.0.0', () => {
