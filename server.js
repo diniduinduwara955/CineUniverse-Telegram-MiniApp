@@ -4,6 +4,7 @@ import cors from 'cors';
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { handleCineUniverseWelcome } from './cine-universe-welcome.mjs';
 
 const app = express();
 const PORT = Number(process.env.PORT || 8787);
@@ -1771,11 +1772,11 @@ async function startUnifiedTelegramListener() {
           } else if(update.callback_query){
             await handleMovieCallback(update.callback_query);
           } else if(update.message){
-            const botWelcomeResult=await sendBotWelcome(update.message);
+            const botWelcomeResult=await handleCineUniverseWelcome(update.message);
             if(botWelcomeResult?.handled){
               console.log('[telegram-listener] bot welcome:',botWelcomeResult);
             } else {
-              const welcomeResult=await sendGroupWelcome(update.message);
+              const welcomeResult={handled:false};
               if(welcomeResult?.handled) {
                 console.log('[telegram-listener] group welcome:',welcomeResult);
               } else if(!groupId || String(update.message.chat?.id)===groupId){
