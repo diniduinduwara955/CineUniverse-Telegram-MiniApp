@@ -1,0 +1,152 @@
+/* Isolated manual movie admin module */
+.manual-movie-admin {
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 67, 94, .18);
+  background:
+    linear-gradient(135deg, rgba(255, 40, 70, .08), rgba(255,255,255,.02)),
+    rgba(9, 13, 21, .72);
+}
+
+.manual-movie-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.manual-movie-kicker {
+  color: #ff5470;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .18em;
+}
+
+.manual-movie-head h3 {
+  margin: 4px 0 5px;
+  font-size: 18px;
+}
+
+.manual-movie-head p {
+  margin: 0;
+  color: #7f8a9b;
+  font-size: 10px;
+  line-height: 1.55;
+  max-width: 560px;
+}
+
+.manual-movie-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(255, 43, 73, .12);
+  border: 1px solid rgba(255, 43, 73, .2);
+  font-size: 18px;
+}
+
+.manual-movie-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.manual-movie-form label {
+  flex: 1;
+  margin: 0;
+}
+
+.manual-movie-form input {
+  margin-top: 6px;
+}
+
+.manual-movie-form small {
+  display: block;
+  margin-top: 5px;
+  color: #697486;
+  font-size: 8px;
+}
+
+.manual-movie-add {
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.manual-movie-add:disabled {
+  opacity: .65;
+  cursor: wait;
+}
+
+.manual-movie-message {
+  margin-top: 10px;
+  color: #b8c2ce;
+  font-size: 10px;
+}
+
+.manual-movie-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(180,205,235,.1);
+}
+
+.manual-movie-preview img,
+.manual-movie-fallback {
+  width: 42px;
+  height: 58px;
+  flex: 0 0 42px;
+  border-radius: 7px;
+  object-fit: cover;
+  background: #111723;
+  border: 1px solid rgba(180,205,235,.12);
+}
+
+.manual-movie-fallback {
+  display: grid;
+  place-items: center;
+}
+
+.manual-movie-preview div {
+  min-width: 0;
+}
+
+.manual-movie-preview strong,
+.manual-movie-preview span,
+.manual-movie-preview small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manual-movie-preview strong {
+  font-size: 12px;
+}
+
+.manual-movie-preview span {
+  margin-top: 3px;
+  color: #7e8998;
+  font-size: 9px;
+}
+
+.manual-movie-preview small {
+  margin-top: 4px;
+  color: #54d99a;
+  font-size: 8px;
+}
+
+@media (max-width: 620px) {
+  .manual-movie-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .manual-movie-add {
+    width: 100%;
+  }
+}
