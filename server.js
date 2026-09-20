@@ -1619,44 +1619,53 @@ async function telegramGetUpdates(token, offset) {
 async function sendBotWelcome(message){
   if(message?.chat?.type!=='private') return {handled:false};
   const text=String(message?.text||'').trim();
-  if(!/^\/start(?:@\w+)?(?:\s+.*)?$/i.test(text)) return {handled:false};
+  if(!/^\\/start(?:@\\w+)?(?:\\s+.*)?$/i.test(text)) return {handled:false};
 
   const user=message?.from||{};
   const display=String(user.first_name||user.username||'මිතුරා').trim();
   const mention=`<a href="tg://user?id=${Number(user.id)}">${htmlEscape(display)}</a>`;
 
   const body=[
-    '╔══════════════════════╗',
-    '🎬 <b>CINE UNIVERSE</b>',
-    '╚══════════════════════╝',
+    '🎬 <b>𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀</b> ✦',
     '',
-    `👋 ආයුබෝවන් ${mention}! ❤️`,
+    `👋 <b>ආයුබෝවන්, ${mention}!</b> ❤️`,
     '',
-    '🍿 <b>Cine Universe Bot වෙත සාදරයෙන් පිළිගනිමු!</b>',
-    '🎞️ Movies • TV Series • Downloads',
+    '🌌 <b>ඔයා දැන් ඇතුළු වුණේ</b>',
+    '<b>චිත්‍රපට ලෝකයක් නෙවෙයි...</b>',
+    '<b>ඔයාගේම 𝐂𝐈𝐍𝐄𝐌𝐀𝐓𝐈𝐂 𝐔𝐍𝐈𝐕𝐄𝐑𝐒𝐄 එකටයි.</b> 🍿',
     '',
-    '🔎 <b>Movie / Series එකක් හොයන්න</b>',
-    'Group එකේ නම + වසර දාලා search කරන්න.',
+    '✨ <b>𝐖𝐇𝐀𝐓 𝐂𝐀𝐍 𝐘𝐎𝐔 𝐃𝐎?</b>',
+    '',
+    '🎬 <b>Movies</b>',
+    '📺 <b>TV Series</b>',
+    '🇱🇰 <b>සිංහල උපසිරැසි</b>',
+    '🔎 <b>Smart Search</b>',
+    '📥 <b>Easy Downloads</b>',
+    '',
+    '🚀 <b>𝐋𝐄𝐓\'𝐒 𝐒𝐓𝐀𝐑𝐓!</b>',
+    '',
+    '👇 <b>Movie / Series එකේ නම type කරන්න</b>',
+    '',
     '<code>Avatar 2009</code>',
+    '<code>The Last of Us 2025</code>',
     '',
-    '🎬 <b>Collection එකක් නම්</b>',
-    '<code>Avatar</code>',
-    '<code>Fast and Furious</code>',
+    '⚡ <b>Search → Select → Download → Enjoy</b> 🍿',
     '',
-    '📥 <b>Download</b>',
-    'Available quality එක select කළාම file එක Telegram එකටම deliver වෙනවා.',
+    '📢 <b>𝐒𝐓𝐀𝐘 𝐔𝐏𝐃𝐀𝐓𝐄𝐃</b>',
+    'අලුත් Movies &amp; Series සඳහා',
+    '<b>Official Channel</b> එකත් Follow කරන්න. 🔥',
     '',
-    '📢 <b>Official Updates</b>',
-    'අලුත් Movie & TV updates සඳහා අපේ Official Channel එක follow කරන්න.',
+    '🎭 <i>“සෑම කතාවකටම තමන්ගේම ලෝකයක් තියෙනවා...”</i>',
     '',
-    '✨ <b>Enjoy your cinematic journey with Cine Universe!</b>',
+    '🌌 <b>𝐘𝐨𝐮𝐫 𝐬𝐭𝐨𝐫𝐲 𝐬𝐭𝐚𝐫𝐭𝐬 𝐡𝐞𝐫𝐞.</b>',
     '',
-    '© 2026 <b>Cine Universe</b>. All Rights Reserved.'
-  ].join('\n');
+    '© <b>𝑫𝒊𝒏𝒊𝒅𝒖 𝑰𝒏𝒅𝒖𝒘𝒂𝒓𝒂</b>',
+    '<i>Founder &amp; Creator • Cine Universe</i> ❤️'
+  ].join('\\n');
 
   const keyboard={inline_keyboard:[
-    [{text:'📢 Official Update Channel',url:process.env.TELEGRAM_CHANNEL_URL||'https://t.me/dinidu20030304'}],
-    [{text:'🎬 Open Cine Universe Mini App',url:MINI_APP_URL||`https://t.me/${BOT_USERNAME}`}],
+    [{text:'🎬 OPEN CINE UNIVERSE',url:process.env.TELEGRAM_BOT_URL||'https://t.me/CINE_UNIVERSE_OFFCIALS_BOT'}],
+    [{text:'📢 UPDATES',url:process.env.TELEGRAM_CHANNEL_URL||'https://t.me/dinidu20030304'}]
   ]};
 
   const logoPath=path.join(process.cwd(),'public','cine-universe-logo.jpg');
@@ -1694,37 +1703,51 @@ async function sendGroupWelcome(message){
     return `<a href="tg://user?id=${Number(user.id)}">${htmlEscape(display)}</a>`;
   }).join(', ');
 
-  const text=[
-    '🎬 <b>CINE UNIVERSE</b>',
+  const body=[
+    '🎬 <b>𝘾𝙄𝙉𝙀 𝙐𝙉𝙄𝙑𝙀𝙍𝙎𝙀</b> ✦',
     '',
-    `👋 ආයුබෝවන් ${mentions}! ❤️`,
+    `👋 <b>ආයුබෝවන්, ${mentions}!</b> ❤️`,
     '',
-    '🍿 <b>Cine Universe වෙත සාදරයෙන් පිළිගනිමු!</b>',
-    '🎞️ Movies • TV Series • Reviews • Updates',
+    '🌌 <b>ඔයා දැන් ඇතුළු වුණේ</b>',
+    '<b>චිත්‍රපට ලෝකයක් නෙවෙයි...</b>',
+    '<b>ඔයාගේම 𝐂𝐈𝐍𝐄𝐌𝐀𝐓𝐈𝐂 𝐔𝐍𝐈𝐕𝐄𝐑𝐒𝐄 එකටයි.</b> 🍿',
     '',
-    '🔎 <b>Search:</b> <code>Avatar 2009</code>',
-    '🎬 <b>Collection:</b> <code>Avatar</code>',
+    '✨ <b>𝐖𝐇𝐀𝐓 𝐂𝐀𝐍 𝐘𝐎𝐔 𝐃𝐎?</b>',
     '',
-    '📢 <b>Updates:</b> Official Channel',
-    '🤖 <b>Downloads:</b> Cine Universe Bot',
+    '🎬 <b>Movies</b> • 📺 <b>TV Series</b>',
+    '🇱🇰 <b>සිංහල උපසිරැසි</b> • 🔎 <b>Smart Search</b>',
+    '📥 <b>Easy Downloads</b>',
     '',
-    '✨ කරුණාකර group එක respectful ලෙස භාවිතා කරන්න.',
+    '🚀 <b>𝐋𝐄𝐓\'𝐒 𝐒𝐓𝐀𝐑𝐓!</b>',
     '',
-    '© 2026 <b>Cine Universe</b>. All Rights Reserved.'
-  ].join('\n');
+    '👇 <b>Movie / Series එකේ නම + වසර type කරන්න</b>',
+    '<code>Avatar 2009</code>',
+    '',
+    '⚡ <b>Search → Select → Download → Enjoy</b> 🍿',
+    '',
+    '📢 <b>𝐒𝐓𝐀𝐘 𝐔𝐏𝐃𝐀𝐓𝐄𝐃</b>',
+    'අලුත් Movies &amp; Series සඳහා <b>Official Channel</b> එක Follow කරන්න. 🔥',
+    '',
+    '🎭 <i>“සෑම කතාවකටම තමන්ගේම ලෝකයක් තියෙනවා...”</i>',
+    '',
+    '🌌 <b>𝐘𝐨𝐮𝐫 𝐬𝐭𝐨𝐫𝐲 𝐬𝐭𝐚𝐫𝐭𝐬 𝐡𝐞𝐫𝐞.</b>',
+    '',
+    '© <b>𝑫𝒊𝒏𝒊𝒅𝒖 𝑰𝒏𝒅𝒖𝒘𝒂𝒓𝒂</b>',
+    '<i>Founder &amp; Creator • Cine Universe</i> ❤️'
+  ].join('\\n');
 
-  const logoPath=path.join(process.cwd(),'public','cine-universe-logo.jpg');
   const keyboard={inline_keyboard:[
-    [{text:'📢 Official Update Channel',url:process.env.TELEGRAM_CHANNEL_URL||'https://t.me/dinidu20030304'}],
-    [{text:'🤖 Open Cine Universe Bot',url:process.env.TELEGRAM_BOT_URL||`https://t.me/${BOT_USERNAME}`}]
+    [{text:'🎬 OPEN CINE UNIVERSE',url:process.env.TELEGRAM_BOT_URL||'https://t.me/CINE_UNIVERSE_OFFCIALS_BOT'}],
+    [{text:'📢 UPDATES',url:process.env.TELEGRAM_CHANNEL_URL||'https://t.me/dinidu20030304'}]
   ]};
 
+  const logoPath=path.join(process.cwd(),'public','cine-universe-logo.jpg');
   try{
     const photo=await fs.readFile(logoPath);
     const form=new FormData();
     form.append('chat_id',String(message.chat.id));
     form.append('photo',new Blob([photo],{type:'image/jpeg'}),'cine-universe-logo.jpg');
-    form.append('caption',text);
+    form.append('caption',body);
     form.append('parse_mode','HTML');
     form.append('reply_markup',JSON.stringify(keyboard));
 
@@ -1736,10 +1759,11 @@ async function sendGroupWelcome(message){
     return {handled:true,welcome:true,count:members.length};
   }catch(err){
     console.warn('[telegram-listener] welcome photo failed, sending text fallback:',err.message||err);
-    await telegramSendMessage(message.chat.id,text,{inline_keyboard:keyboard});
+    await telegramSendMessage(message.chat.id,body,{inline_keyboard:keyboard});
     return {handled:true,welcome:true,count:members.length,fallback:true};
   }
 }
+
 
 
 async function startUnifiedTelegramListener() {
