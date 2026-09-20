@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import "./search-results.css";
 
 function resolvePoster(movie) {
   const raw = String(
