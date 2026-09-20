@@ -1668,7 +1668,7 @@ async function sendBotWelcome(message){
     [{text:'📢 UPDATES',url:process.env.TELEGRAM_CHANNEL_URL||'https://t.me/dinidu20030304'}]
   ]};
 
-  const logoPath=path.join(process.cwd(),'public','cine-universe-logo.jpg');
+  const logoPath=path.join(process.cwd(),'cine-universe-logo.jpg');
   try{
     const token=process.env.TELEGRAM_BOT_TOKEN;
     if(!token) throw new Error('TELEGRAM_BOT_TOKEN is not configured.');
@@ -1741,7 +1741,7 @@ async function sendGroupWelcome(message){
     [{text:'📢 UPDATES',url:process.env.TELEGRAM_CHANNEL_URL||'https://t.me/dinidu20030304'}]
   ]};
 
-  const logoPath=path.join(process.cwd(),'public','cine-universe-logo.jpg');
+  const logoPath=path.join(process.cwd(),'cine-universe-logo.jpg');
   try{
     const photo=await fs.readFile(logoPath);
     const form=new FormData();
