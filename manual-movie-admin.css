@@ -150,3 +150,47 @@
     width: 100%;
   }
 }
+
+
+.manual-movie-form-stack {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: stretch;
+}
+
+.manual-movie-two {
+  display: grid;
+  grid-template-columns: 1.4fr .8fr;
+  gap: 10px;
+}
+
+.manual-movie-two label {
+  min-width: 0;
+}
+
+.manual-optional {
+  color: #667387;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.manual-movie-note {
+  margin-top: 12px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  color: #798699;
+  background: rgba(255,255,255,.025);
+  border: 1px solid rgba(180,205,235,.08);
+  font-size: 8px;
+  line-height: 1.55;
+}
+
+.manual-movie-note b {
+  color: #b5c0cd;
+}
+
+@media (max-width: 620px) {
+  .manual-movie-two {
+    grid-template-columns: 1fr;
+  }
+}
