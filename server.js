@@ -1578,7 +1578,14 @@ app.get('/api/movies/:id',safeRun(async(req,res)=>{
 app.get('/api/trending',safeRun(async(req,res)=>{const g=await genreMapFor('movie');const d=await tmdb('/trending/all/week');res.json({ok:true,results:pickResults(d).map(x=>normalize(x,x.media_type==='tv'?'tv':'movie',g))});}));
 app.get('/api/movies',safeRun(async(req,res)=>{const g=await genreMapFor('movie');const d=await tmdb('/movie/popular',{page:1});const catalog=await loadCatalog();const pub=Object.values(catalog);const live=pickResults(d).map(x=>normalize(x,'movie',g));res.json({ok:true,results:[...pub,...live.filter(x=>!catalog[String(x.id)])].slice(0,30)});}));
 app.get('/api/tv',safeRun(async(req,res)=>{const g=await genreMapFor('tv');const d=await tmdb('/tv/popular',{page:1});res.json({ok:true,results:pickResults(d).map(x=>normalize(x,'tv',g))});}));
-app.get('/api/search',safeRun(async(req,res)=>{const q=String(req.query.q||'').trim();if(!q)return res.json({ok:true,results:[]});const [m,t]=await Promise.all([tmdb('/search/movie',{query:q,page:1}),tmdb('/search/tv',{query:q,page:1})]);const gM=await genreMapFor('movie'),gT=await genreMapFor('tv'),catalog=await loadCatalog();const pub=Object.values(catalog).filter(x=>String(x.title||'').toLowerCase().includes(q.toLowerCase()));const live=[...pickResults(m).map(x=>normalize(x,'movie',gM)),...pickResults(t).map(x=>normalize(x,'tv',gT))];res.json({ok:true,results:[...pub,...live.filter(x=>x.type==='TV Series'||!catalog[String(x.id)])].slice(0,30)});}));
+app.get('/api/search',safeRun(async(req,res)=>{
+  const q=String(req.query.q||'').trim();
+  if(!q) return res.json({ok:true,results:[],total:0,source:'cine-universe-database'});
+  const {searchPublishedCatalog}=await import('./server/catalog-search-engine.mjs');
+  const result=await searchPublishedCatalog(q,{limit:8});
+  res.json({ok:true,...result});
+}));
+
 app.get('/api/discover',safeRun(async(req,res)=>{const genre=String(req.query.genre||''),mediaType=String(req.query.mediaType||'movie'),g=await genreMapFor(mediaType);const gid=Object.entries(g).find(([,n])=>n.toLowerCase()===genre.toLowerCase())?.[0];if(!gid)return res.json({ok:true,results:[]});const d=await tmdb(`/discover/${mediaType}`,{with_genres:gid,page:1,sort_by:'popularity.desc'});res.json({ok:true,results:pickResults(d).map(x=>normalize(x,mediaType,g))});}));
 app.get('/api/india/movies',safeRun(async(req,res)=>{const g=await genreMapFor('movie'),d=await tmdb('/discover/movie',{with_origin_country:'IN',page:1,sort_by:'popularity.desc'});res.json({ok:true,results:pickResults(d).map(x=>normalize(x,'movie',g))});}));
 app.get('/api/india/tv',safeRun(async(req,res)=>{const g=await genreMapFor('tv'),d=await tmdb('/discover/tv',{with_origin_country:'IN',page:1,sort_by:'popularity.desc'});res.json({ok:true,results:pickResults(d).map(x=>normalize(x,'tv',g))});}));
