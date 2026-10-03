@@ -573,6 +573,10 @@ async function loadDownloadMap() {
   }
 }
 
+async function saveDownloadMap(map) {
+  await fs.writeFile(DOWNLOADS_FILE, JSON.stringify(map, null, 2), 'utf8');
+}
+
 async function loadCatalog(){try{return JSON.parse(await fs.readFile(CATALOG_FILE,'utf8'));}catch{return {};}}
 async function saveCatalog(catalog){await fs.writeFile(CATALOG_FILE,JSON.stringify(catalog,null,2),'utf8');}
 function qualityOrder(){return ['4K','1080P','720P','480P'];}
@@ -1450,6 +1454,106 @@ function requireAdmin(req,res){
   return true;
 }
 
+app.get('/api/admin/downloads', safeRun(async (req,res) => {
+  if(!requireAdmin(req,res)) return;
+  const mediaType=String(req.query.mediaType||'movie').trim();
+  const mediaId=String(req.query.mediaId||'').trim();
+  if(mediaType!=='movie') return res.json({ok:true,mediaType,mediaId,qualities:{}});
+  if(!mediaId) return res.status(400).json({ok:false,error:'mediaId is required.'});
+  const map=await loadDownloadMap();
+  const qualities={};
+  for(const q of qualityOrder()){
+    const item=map[`movie:${mediaId}:${q}`];
+    if(item?.channel_message_id) qualities[q]={available:true,channel_chat_id:item.channel_chat_id||'',channel_message_id:Number(item.channel_message_id),size:item.size||'',codec:item.codec||'',audio:item.audio||'',title:item.title||''};
+  }
+  res.json({ok:true,mediaType,mediaId,qualities});
+}));
+
+app.post('/api/admin/downloads', safeRun(async (req,res) => {
+  if(!requireAdmin(req,res)) return;
+  const mediaType=String(req.body?.mediaType||'movie').trim();
+  const mediaId=Number(req.body?.mediaId||0);
+  const quality=String(req.body?.quality||'').toUpperCase().trim();
+  const sourceChatId=String(req.body?.channel_chat_id||MOVIE_UPLOAD_CHANNEL_CHAT_ID||'').trim();
+  const messageId=Number(req.body?.channel_message_id||0);
+  const size=String(req.body?.size||'').trim();
+  const codec=String(req.body?.codec||'').trim();
+  const audio=String(req.body?.audio||'').trim();
+  if(mediaType!=='movie') return res.status(400).json({ok:false,error:'Manual Telegram file mapping currently supports movies.'});
+  if(!Number.isInteger(mediaId)||mediaId<=0) return res.status(400).json({ok:false,error:'A valid TMDB movie ID is required.'});
+  if(!qualityOrder().includes(quality)) return res.status(400).json({ok:false,error:'Select 4K, 1080P, 720P or 480P.'});
+  if(!sourceChatId) return res.status(400).json({ok:false,error:'Movie Upload Channel ID is not configured.'});
+  if(!Number.isInteger(messageId)||messageId<=0) return res.status(400).json({ok:false,error:'Enter a valid Telegram channel message ID.'});
+
+  const details=await movieDetailsWithCredits(mediaId);
+  const title=String(details?.title||details?.original_title||'').trim();
+  if(!title) return res.status(404).json({ok:false,error:'TMDB movie was not found.'});
+
+  const map=await loadDownloadMap();
+  const key=`movie:${mediaId}:${quality}`;
+  map[key]={
+    ...(map[key]||{}),
+    channel_chat_id:sourceChatId,
+    channel_message_id:messageId,
+    title,
+    year:String(details.release_date||'').slice(0,4),
+    poster:details.poster_path?`${POSTER_BASE}${details.poster_path}`:'',
+    backdrop:details.backdrop_path?`${BACKDROP_BASE}${details.backdrop_path}`:'',
+    size,
+    codec,
+    audio,
+    caption:String(req.body?.caption||'').trim(),
+    updated_at:new Date().toISOString(),
+    manually_added:true
+  };
+  await saveDownloadMap(map);
+
+  const catalog=await loadCatalog();
+  const imdb=await getImdbMetadata(details);
+  const entry=buildCatalogEntry(details,map,mediaId,imdb);
+  const existing=catalog[String(mediaId)]||{};
+  catalog[String(mediaId)]={...existing,...entry,source:existing.source||'manual-admin',manuallyAdded:true,updatedAt:new Date().toISOString()};
+  await saveCatalog(catalog);
+
+  res.json({ok:true,action:map[key]?.updated_at&&existing.qualities?.[quality]?'updated':'saved',mediaId,quality,mapping:map[key],movie:catalog[String(mediaId)]});
+}));
+
+app.delete('/api/admin/downloads', safeRun(async (req,res) => {
+  if(!requireAdmin(req,res)) return;
+  const mediaType=String(req.query.mediaType||'movie').trim();
+  const mediaId=String(req.query.mediaId||'').trim();
+  const quality=String(req.query.quality||'').toUpperCase().trim();
+  if(mediaType!=='movie') return res.status(400).json({ok:false,error:'Only movie mappings can be removed here.'});
+  if(!mediaId||!qualityOrder().includes(quality)) return res.status(400).json({ok:false,error:'mediaId and valid quality are required.'});
+
+  const map=await loadDownloadMap();
+  delete map[`movie:${mediaId}:${quality}`];
+  await saveDownloadMap(map);
+
+  try{
+    const id=Number(mediaId);
+    const details=await movieDetailsWithCredits(id);
+    const imdb=await getImdbMetadata(details);
+    const catalog=await loadCatalog();
+    const existing=catalog[mediaId]||{};
+    catalog[mediaId]={...existing,...buildCatalogEntry(details,map,id,imdb),updatedAt:new Date().toISOString()};
+    await saveCatalog(catalog);
+  }catch(err){
+    console.warn('[admin-downloads] catalog refresh after delete failed:',err.message||err);
+  }
+  res.json({ok:true,mediaType,mediaId,quality,removed:true});
+}));
+
+app.post('/api/admin/verify-channel-message', safeRun(async (req,res) => {
+  if(!requireAdmin(req,res)) return;
+  const chatId=String(req.body?.channel_chat_id||MOVIE_UPLOAD_CHANNEL_CHAT_ID||'').trim();
+  const messageId=Number(req.body?.channel_message_id||0);
+  if(!chatId) return res.status(400).json({ok:false,error:'Channel Chat ID is required.'});
+  if(!Number.isInteger(messageId)||messageId<=0) return res.status(400).json({ok:false,error:'Enter a valid Telegram message ID.'});
+  const channel=await telegramGetChat(chatId);
+  res.json({ok:true,channel:{id:channel.id,title:channel.title||'',username:channel.username||'',type:channel.type||''},message_id:messageId,verified:false,note:'Telegram Bot API does not expose a read-message endpoint; the channel itself is reachable and the message ID format is valid.'});
+}));
+
 app.post('/api/admin/diagnose-post',(req,res)=>{try{const info=extractChannelFile(req.body||{});res.json({ok:true,info});}catch(e){res.status(500).json({ok:false,error:e.message});}});
 
 app.get('/api/admin/test-movie-match', safeRun(async (req,res) => {
@@ -1823,6 +1927,7 @@ registerManualMovieAdmin({
   loadCatalog,
   saveCatalog,
   loadDownloadMap,
+  saveDownloadMap,
   movieDetailsWithCredits,
   getImdbMetadata,
   buildCatalogEntry
