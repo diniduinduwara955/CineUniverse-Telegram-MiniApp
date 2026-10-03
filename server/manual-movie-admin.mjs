@@ -77,6 +77,7 @@ export function registerManualMovieAdmin({
   loadCatalog,
   saveCatalog,
   loadDownloadMap,
+  saveDownloadMap,
   movieDetailsWithCredits,
   getImdbMetadata,
   buildCatalogEntry
@@ -117,6 +118,12 @@ export function registerManualMovieAdmin({
         updated_at: new Date().toISOString(),
         manually_added: true
       };
+
+      // Persist the Telegram message mapping first so download delivery and restart persistence
+      // use the same source of truth as the automatic channel uploader.
+      if (typeof saveDownloadMap === 'function') {
+        await saveDownloadMap(downloads);
+      }
 
       const catalog = await loadCatalog();
       const imdb = await getImdbMetadata(details);
