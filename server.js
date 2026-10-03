@@ -287,22 +287,45 @@ function channelMovieUpdateText(movie){
   ].filter(Boolean).join('\n');
 }
 
+function toBoldUnicode(value=''){
+  const chars=String(value).split('');
+  const out=[];
+  for(const ch of chars){
+    const code=ch.codePointAt(0);
+    if(code>=65&&code<=90) out.push(String.fromCodePoint(0x1D400+(code-65)));
+    else if(code>=97&&code<=122) out.push(String.fromCodePoint(0x1D41A+(code-97)));
+    else if(code>=48&&code<=57) out.push(String.fromCodePoint(0x1D7CE+(code-48)));
+    else out.push(ch);
+  }
+  return out.join('');
+}
+
+function tvSeasonNumber(value=''){
+  const m=String(value||'').match(/S(\\d{1,2})/i);
+  return m ? String(Number(m[1])).padStart(2,'0') : '';
+}
+
 function channelTvUpdateText(tv,episodeLabel=''){
-  const title=tv.name||tv.original_name||'TV Series';
-  const year=String(tv.first_air_date||'').slice(0,4);
-  const imdb=String(tv.imdbRating||'').trim();
-  const genres=(tv.genres||[]).map(g=>g.name).filter(Boolean).slice(0,2);
-  const cast=(tv.credits?.cast||[]).slice(0,3).map(x=>x.name).filter(Boolean);
+  const title=String(tv.name||tv.original_name||'TV Series').trim();
+  const year=String(tv.first_air_date||'').slice(0,4)||'—';
+  const imdb=String(tv.imdbRating||'').trim()||'—';
+  const genres=(tv.genres||[]).map(g=>g.name).filter(Boolean);
+  const season=tvSeasonNumber(episodeLabel)||'—';
+  const overview=String(tv.overview||'No description available.').trim();
+
   return [
-    '📺 <b>CINE UNIVERSE</b>',
-    `🔥 <b>${htmlEscape(title)}</b>${year?` • ${htmlEscape(year)}`:''}`,
-    episodeLabel?`🎯 ${htmlEscape(episodeLabel)}`:'',
-    imdb?`⭐ <b>IMDb</b> ${htmlEscape(imdb)}/10`:'⭐ <b>IMDb</b> —',
-    genres.length?`🎭 ${htmlEscape(genres.join(' • '))}`:'',
-    cast.length?`👥 ${htmlEscape(cast.join(' • '))}`:'',
-    '',
-    '📥 <b>Download options below 👇</b>'
-  ].filter(Boolean).join('\n');
+    '◈ ─── 𝗡𝗘𝗪 𝗦𝗘𝗥𝗜𝗘𝗦 ─── ◈',
+    `📺 ${toBoldUnicode(htmlEscape(title))}`,
+    `𝗜𝗠𝗗𝗕  ⭐ ${htmlEscape(imdb)}/10`,
+    `𝗥𝗘𝗟𝗘𝗔𝗦𝗘  ·  ${htmlEscape(year)}`,
+    `𝗚𝗘𝗡𝗥𝗘  ·  ${htmlEscape(genres.join(' • ')||'—')}`,
+    `𝗦𝗘𝗔𝗦𝗢𝗡  ·  ${htmlEscape(season)}`,
+    '📝 𝗦𝗧𝗢𝗥𝗬',
+    htmlEscape(overview),
+    '━━━━━━━━━━━━━━━━━━',
+    `▶️ 𝗦𝗘𝗔𝗦𝗢𝗡 ${toBoldUnicode(season)} 𝗔𝗩𝗔𝗜𝗟𝗔𝗕𝗟𝗘`,
+    '© 𝟮𝟬𝟮𝟲 𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘 · 𝗗𝗜𝗡𝗜𝗗𝗨 𝗜𝗡𝗗𝗨𝗪𝗔𝗥𝗔'
+  ].join('\n');
 }
 
 function groupMovieResultText(movie, qualities=[]){
@@ -374,11 +397,9 @@ async function publishTvCatalogUpdateById(tvId, channelUrl=''){
   if(!details.poster_path) throw Object.assign(new Error('This TV Series has no poster on TMDB.'),{status:422});
 
   const url=String(channelUrl||await getTvChannelUrl(id)).trim();
-  const rows=[];
-  if(url) rows.push([{text:'📺 Open TV Channel',url}]);
-  const mini=buildMiniAppUrl(id);
-  if(mini) rows.push([{text:'🎬 Open in Mini App',url:mini}]);
-  rows.push([{text:'🤖 Open Bot',url:`https://t.me/${BOT_USERNAME}`}]);
+  const rows=[
+    [{text:'⚡️𝐂𝐈𝐍𝐄 𝐔𝐍𝐈𝐕𝐄𝐑𝐒𝐄 | 𝐖𝐀𝐈𝐓𝐈𝐍𝐆 𝐙𝐎𝐍𝐄⚡️',url:'https://t.me/+KKGRIS2pU18wYWU1'}]
+  ];
 
   const catalog=await loadTvCatalog();
   const entry={
@@ -438,11 +459,9 @@ async function publishTvUpdate(post){
   const url=await getTvChannelUrl(tv.id);
   const episode=tvEpisodeLabel(post);
 
-  const rows=[];
-  if(url) rows.push([{text:'📺 Open TV Channel',url}]);
-  const mini=buildMiniAppUrl(tv.id);
-  if(mini) rows.push([{text:'🎬 Open in Mini App',url:mini}]);
-  rows.push([{text:'🤖 Open Bot',url:`https://t.me/${BOT_USERNAME}`}]);
+  const rows=[
+    [{text:'⚡️𝐂𝐈𝐍𝐄 𝐔𝐍𝐈𝐕𝐄𝐑𝐒𝐄 | 𝐖𝐀𝐈𝐓𝐈𝐍𝐆 𝐙𝐎𝐍𝐄⚡️',url:'https://t.me/+KKGRIS2pU18wYWU1'}]
+  ];
 
   const catalog=await loadTvCatalog();
   const entry={
