@@ -158,8 +158,20 @@ function App(){
   const saveAdminKey=()=>{sessionStorage.setItem("cine-admin-key",adminKey.trim());setAdminMessage("Admin key saved for this session.");};
   async function adminSearchTmdb(){
     if(!adminSearch.trim()) return;
-    try{setAdminLoading(true);const d=await apiGet(`/search?q=${encodeURIComponent(adminSearch.trim())}`);setAdminResults(d.results||[]);setAdminMessage("");}
-    catch(e){setAdminMessage(e.message||"Search failed");} finally{setAdminLoading(false);}
+    try{
+      setAdminLoading(true);
+      const q=encodeURIComponent(adminSearch.trim());
+      const [movieResult,tvResult]=await Promise.allSettled([
+        apiGet(`/search?q=${q}`),
+        adminApi(`/admin/tv-search?q=${q}`)
+      ]);
+      const movieResults=movieResult.status==="fulfilled"?(movieResult.value.results||[]):[];
+      const tvResults=tvResult.status==="fulfilled"?(tvResult.value.results||[]):[];
+      const merged=[...movieResults,...tvResults].filter((item,index,self)=>self.findIndex(x=>x.mediaType===item.mediaType&&x.id===item.id)===index);
+      setAdminResults(merged);
+      setAdminMessage(merged.length?"":"No movie or TV results found.");
+    }catch(e){setAdminMessage(e.message||"Search failed");}
+    finally{setAdminLoading(false);}
   }
   async function loadAdminMedia(media){
     setAdminSelected(media); setAdminMap({});
@@ -315,6 +327,7 @@ function App(){
   </div>
 
   {(adminSelected?.mediaType==="tv" || adminSelected?.type==="TV Series") ? (
+    <>
     <ManualTvManager adminApi={adminApi} media={adminSelected} />
     <div className="admin-tv-channel-card glass">
       <div className="admin-card-head">
@@ -370,6 +383,7 @@ function App(){
       </button>
       {adminMessage&&<div className="admin-message tv-save-status">{adminMessage}</div>}
     </div>
+    </>
   ) : (
     <>
       <div className="quality-manager">
