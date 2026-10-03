@@ -47,6 +47,24 @@ export default function ManualTvManager({ adminApi, media, onSaved }) {
     return data;
   }
 
+  async function adminApiSameOrigin(path, options = {}) {
+    const response = await fetch(window.location.origin + "/api" + path, {
+      ...options,
+      headers: {
+        "content-type": "application/json",
+        "x-admin-key": sessionStorage.getItem("cine-admin-key") || "",
+        ...(options.headers || {})
+      }
+    });
+    const text = await response.text();
+    let data = {};
+    try { data = text ? JSON.parse(text) : {}; } catch {
+      throw new Error("Invalid server response.");
+    }
+    if (!response.ok) throw new Error(data?.error || ("Admin API error " + response.status));
+    return data;
+  }
+
   async function searchTvSeries() {
     const q = search.trim();
     if (!q) {
@@ -91,7 +109,7 @@ export default function ManualTvManager({ adminApi, media, onSaved }) {
       return;
     }
     try {
-      const data = await adminApi("/admin/tv-channel?mediaId=" + encodeURIComponent(id));
+      const data = await adminApiSameOrigin("/admin/tv-channel?mediaId=" + encodeURIComponent(id));
       setPrivateChannelUrl(data.inviteUrl || "");
     } catch {
       setPrivateChannelUrl("");
@@ -109,7 +127,7 @@ export default function ManualTvManager({ adminApi, media, onSaved }) {
     try {
       setPrivateChannelBusy(true);
       setMessage("Saving private TV channel…");
-      const result = await adminApi("/admin/tv-channel", {
+      const result = await adminApiSameOrigin("/admin/tv-channel", {
         method: "POST",
         body: JSON.stringify({ mediaId, inviteUrl: link })
       });
@@ -137,7 +155,7 @@ export default function ManualTvManager({ adminApi, media, onSaved }) {
     try {
       setBusy(true);
       setMessage("Saving TV file + publishing update…");
-      const result = await adminApi("/admin/tv-downloads", {
+      const result = await adminApiSameOrigin("/admin/tv-downloads", {
         method: "POST",
         body: JSON.stringify({
           mediaId,
@@ -180,7 +198,7 @@ export default function ManualTvManager({ adminApi, media, onSaved }) {
       return;
     }
     try {
-      const data = await adminApi("/admin/tv-downloads?mediaId=" + encodeURIComponent(id));
+      const data = await adminApiSameOrigin("/admin/tv-downloads?mediaId=" + encodeURIComponent(id));
       setEntries(Array.isArray(data.entries) ? data.entries : []);
     } catch (error) {
       setMessage("❌ " + (error.message || "Could not load TV file mappings."));
@@ -190,7 +208,7 @@ export default function ManualTvManager({ adminApi, media, onSaved }) {
   async function removeEntry(entry) {
     try {
       setBusy(true);
-      await adminApi(
+      await adminApiSameOrigin(
         "/admin/tv-downloads?mediaId=" + encodeURIComponent(mediaId) +
         "&scope=" + encodeURIComponent(entry.scope) +
         "&season=" + entry.season +
