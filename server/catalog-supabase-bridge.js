@@ -6,6 +6,7 @@ const originalWriteFile = fs.writeFile.bind(fs);
 const originalFetch = globalThis.fetch.bind(globalThis);
 const CATALOG_FILE = path.join(process.cwd(), 'server', 'published-catalog.json');
 const TV_CATALOG_FILE = path.join(process.cwd(), 'server', 'published-tv-catalog.json');
+const TV_CHANNELS_FILE = path.join(process.cwd(), 'server', 'tv-channel-map.json');
 const DOWNLOADS_FILE = path.join(process.cwd(), 'server', 'downloads.json');
 const LIVE_MESSAGE_FILE = path.join(process.cwd(), 'server', 'live-content-message.json');
 const SUPABASE_URL = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
@@ -136,6 +137,7 @@ fs.readFile = async function(file, options) {
   const target = path.resolve(String(file));
   const isMovie = target === path.resolve(CATALOG_FILE);
   const isTv = target === path.resolve(TV_CATALOG_FILE);
+  const isTvChannels = target === path.resolve(TV_CHANNELS_FILE);
   const isDownloads = target === path.resolve(DOWNLOADS_FILE);
   const callerStack = String(new Error().stack || '');
 
@@ -155,6 +157,27 @@ fs.readFile = async function(file, options) {
       }
     } catch (error) {
       console.warn('[catalog-bridge] Supabase downloads read failed; using local file:', error.message || error);
+    }
+
+    return originalReadFile(file, options);
+  }
+
+  if (isTvChannels) {
+    try {
+      const local = await originalReadFile(file, options);
+      const localText = typeof local === 'string' ? local : Buffer.from(local).toString('utf8');
+      const localMap = JSON.parse(localText);
+      if (localMap && typeof localMap === 'object' && Object.keys(localMap).length > 0) return local;
+    } catch {}
+
+    try {
+      const payload = await fetchRuntimeCatalog('tvChannels');
+      if (payload && typeof payload === 'object') {
+        const text = JSON.stringify(payload);
+        return typeof options === 'string' || options?.encoding ? text : Buffer.from(text);
+      }
+    } catch (error) {
+      console.warn('[catalog-bridge] Supabase TV channel map read failed; using local file:', error.message || error);
     }
 
     return originalReadFile(file, options);
@@ -191,17 +214,23 @@ fs.readFile = async function(file, options) {
 fs.writeFile = async function(file, data, options) {
   const result = await originalWriteFile(file, data, options);
   const target = path.resolve(String(file));
-  if (target !== path.resolve(DOWNLOADS_FILE)) return result;
+  const runtimeKey =
+    target === path.resolve(DOWNLOADS_FILE) ? 'downloads' :
+    target === path.resolve(CATALOG_FILE) ? 'movieCatalog' :
+    target === path.resolve(TV_CATALOG_FILE) ? 'tvCatalog' :
+    target === path.resolve(TV_CHANNELS_FILE) ? 'tvChannels' : '';
+
+  if (!runtimeKey) return result;
 
   try {
     const localText = typeof data === 'string' ? data : Buffer.from(data).toString('utf8');
-    const localMap = JSON.parse(localText);
-    if (localMap && typeof localMap === 'object') {
-      await saveRuntimeCatalog('downloads', localMap);
-      console.log(`[catalog-bridge] Downloads synced to Supabase: ${Object.keys(localMap).length} records.`);
+    const payload = JSON.parse(localText);
+    if (payload && typeof payload === 'object') {
+      await saveRuntimeCatalog(runtimeKey, payload);
+      console.log(`[catalog-bridge] ${runtimeKey} synced to Supabase: ${Object.keys(payload).length} records.`);
     }
   } catch (error) {
-    console.warn('[catalog-bridge] Supabase downloads sync failed; local write kept:', error.message || error);
+    console.warn(`[catalog-bridge] Supabase ${runtimeKey} sync failed; local write kept:`, error.message || error);
   }
 
   return result;
