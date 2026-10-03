@@ -52,7 +52,7 @@ export default function ManualTvManager({ adminApi, media, onSaved }) {
     try {
       setBusy(true);
       setMessage("Loading TV Series from TMDB…");
-      const data = await adminApi("/tv/" + id);
+      const response = await fetch(window.location.origin + "/api/tv/" + id); const data = await response.json(); if (!response.ok) throw new Error(data?.error || ("API error " + response.status));
       setSelectedMedia(data);
       setTmdbInput(String(id));
       setMessage("✅ " + (data.title || "TV Series") + " loaded.");
