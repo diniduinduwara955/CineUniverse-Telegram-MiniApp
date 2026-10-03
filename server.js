@@ -137,6 +137,7 @@ function safeRun(handler) {
 
 
 const DOWNLOADS_FILE = path.join(process.cwd(), 'server', 'downloads.json');
+const TV_DOWNLOADS_FILE = path.join(process.cwd(), 'server', 'tv-downloads.json');
 const FILE_EXPIRY_FILE = path.join(process.cwd(), 'server', 'file-expiry-jobs.json');
 const FILE_EXPIRY_MS = 48 * 60 * 60 * 1000;
 const TV_CATALOG_FILE = path.join(process.cwd(), 'server', 'published-tv-catalog.json');
@@ -575,6 +576,25 @@ async function loadDownloadMap() {
 
 async function saveDownloadMap(map) {
   await fs.writeFile(DOWNLOADS_FILE, JSON.stringify(map, null, 2), 'utf8');
+}
+
+async function loadTvDownloadMap() {
+  try {
+    const raw = await fs.readFile(TV_DOWNLOADS_FILE, 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+async function saveTvDownloadMap(map) {
+  await fs.writeFile(TV_DOWNLOADS_FILE, JSON.stringify(map, null, 2), 'utf8');
+}
+
+function tvDownloadKey(mediaId, scope, season, episode, quality) {
+  const s = Number(season);
+  const e = scope === 'season' ? 0 : Number(episode);
+  return `tv:${mediaId}:S${String(s).padStart(2, '0')}:E${String(e).padStart(2, '0')}:${quality}`;
 }
 
 async function loadCatalog(){try{return JSON.parse(await fs.readFile(CATALOG_FILE,'utf8'));}catch{return {};}}
@@ -1614,6 +1634,92 @@ app.get('/api/tv/:id',safeRun(async(req,res)=>{
     privateChannelUrl
   });
 }));
+app.get('/api/admin/tv-downloads', safeRun(async(req,res)=>{
+  if(!requireAdmin(req,res)) return;
+  const mediaId=String(req.query.mediaId||'').trim();
+  if(!mediaId) return res.status(400).json({ok:false,error:'mediaId is required.'});
+  const map=await loadTvDownloadMap();
+  const entries=Object.entries(map)
+    .filter(([,item])=>String(item?.media_id||'')===mediaId)
+    .map(([key,item])=>({key,...item}))
+    .sort((a,b)=>
+      Number(a.season||0)-Number(b.season||0) ||
+      Number(a.episode||0)-Number(b.episode||0) ||
+      qualityOrder().indexOf(String(b.quality||''))-qualityOrder().indexOf(String(a.quality||''))
+    );
+  res.json({ok:true,mediaType:'tv',mediaId,entries});
+}));
+
+app.post('/api/admin/tv-downloads', safeRun(async(req,res)=>{
+  if(!requireAdmin(req,res)) return;
+
+  const mediaId=Number(req.body?.mediaId||0);
+  const scope=String(req.body?.scope||'episode').toLowerCase().trim();
+  const season=Number(req.body?.season||0);
+  const episode=Number(req.body?.episode||0);
+  const quality=String(req.body?.quality||'').toUpperCase().trim();
+  const sourceChatId=String(req.body?.channel_chat_id||'').trim();
+  const messageId=Number(req.body?.channel_message_id||0);
+  const size=String(req.body?.size||'').trim();
+  const codec=String(req.body?.codec||'').trim();
+  const audio=String(req.body?.audio||'').trim();
+
+  if(!Number.isInteger(mediaId)||mediaId<=0) return res.status(400).json({ok:false,error:'A valid TMDB TV Series ID is required.'});
+  if(!['episode','season'].includes(scope)) return res.status(400).json({ok:false,error:'Select Episode or Full Season.'});
+  if(!Number.isInteger(season)||season<=0) return res.status(400).json({ok:false,error:'Enter a valid season number.'});
+  if(scope==='episode' && (!Number.isInteger(episode)||episode<=0)) return res.status(400).json({ok:false,error:'Enter a valid episode number.'});
+  if(!qualityOrder().includes(quality)) return res.status(400).json({ok:false,error:'Select 4K, 1080P, 720P or 480P.'});
+  if(!sourceChatId) return res.status(400).json({ok:false,error:'TV Channel Chat ID is required.'});
+  if(!Number.isInteger(messageId)||messageId<=0) return res.status(400).json({ok:false,error:'Enter a valid Telegram message ID.'});
+
+  const details=await tvDetailsWithCredits(mediaId);
+  const title=String(details?.name||details?.original_name||'').trim();
+  if(!title) return res.status(404).json({ok:false,error:'TMDB TV Series was not found.'});
+
+  const map=await loadTvDownloadMap();
+  const key=tvDownloadKey(mediaId,scope,season,episode,quality);
+  map[key]={
+    ...(map[key]||{}),
+    media_id:String(mediaId),
+    media_type:'tv',
+    title,
+    season,
+    episode:scope==='season'?0:episode,
+    scope,
+    quality,
+    channel_chat_id:sourceChatId,
+    channel_message_id:messageId,
+    size,
+    codec,
+    audio,
+    updated_at:new Date().toISOString(),
+    manually_added:true
+  };
+  await saveTvDownloadMap(map);
+
+  res.json({ok:true,action:'saved',mediaType:'tv',mediaId,entry:{key,...map[key]}});
+}));
+
+app.delete('/api/admin/tv-downloads', safeRun(async(req,res)=>{
+  if(!requireAdmin(req,res)) return;
+  const mediaId=String(req.query.mediaId||'').trim();
+  const scope=String(req.query.scope||'episode').toLowerCase().trim();
+  const season=Number(req.query.season||0);
+  const episode=Number(req.query.episode||0);
+  const quality=String(req.query.quality||'').toUpperCase().trim();
+  if(!mediaId||!['episode','season'].includes(scope)||!Number.isInteger(season)||season<=0||!qualityOrder().includes(quality)){
+    return res.status(400).json({ok:false,error:'mediaId, scope, season and quality are required.'});
+  }
+  if(scope==='episode' && (!Number.isInteger(episode)||episode<=0)) return res.status(400).json({ok:false,error:'episode is required.'});
+
+  const map=await loadTvDownloadMap();
+  const key=tvDownloadKey(mediaId,scope,season,episode,quality);
+  delete map[key];
+  await saveTvDownloadMap(map);
+
+  res.json({ok:true,mediaType:'tv',mediaId,scope,season,episode:scope==='season'?0:episode,quality,removed:true});
+}));
+
 app.post('/api/admin/tv-channel',safeRun(async(req,res)=>{
   if(!requireAdmin(req,res))return;
   const id=String(req.body?.mediaId||'').trim();
@@ -1650,7 +1756,58 @@ app.get('/api/catalog',safeRun(async(req,res)=>{
   if(changed) await saveCatalog(catalog);
   res.json({ok:true,results:Object.values(catalog).sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')))});
 }));
+app.get('/api/tv-downloads/map',safeRun(async(req,res)=>{
+  const mediaId=String(req.query.mediaId||'').trim();
+  if(!mediaId) return res.status(400).json({ok:false,error:'mediaId is required'});
+  const map=await loadTvDownloadMap();
+  const entries=Object.entries(map)
+    .filter(([,item])=>String(item?.media_id||'')===mediaId && item?.channel_message_id)
+    .map(([key,item])=>({
+      key,
+      scope:item.scope||'episode',
+      season:Number(item.season||0),
+      episode:Number(item.episode||0),
+      quality:String(item.quality||'').toUpperCase(),
+      size:item.size||'',
+      codec:item.codec||'',
+      audio:item.audio||'',
+      channel_chat_id:item.channel_chat_id||'',
+      channel_message_id:Number(item.channel_message_id),
+      title:item.title||''
+    }))
+    .sort((a,b)=>
+      a.season-b.season ||
+      a.episode-b.episode ||
+      qualityOrder().indexOf(b.quality)-qualityOrder().indexOf(a.quality)
+    );
+  res.json({ok:true,mediaType:'tv',mediaId,entries});
+}));
+
 app.get('/api/downloads/map',safeRun(async(req,res)=>{const mediaType=String(req.query.mediaType||'movie');const mediaId=String(req.query.mediaId||'');if(!mediaId)return res.status(400).json({ok:false,error:'mediaId is required'});if(mediaType!=='movie')return res.json({ok:true,mediaType,mediaId,qualities:{}});const map=await loadDownloadMap();const qualities={};for(const q of qualityOrder()){const item=map[`movie:${mediaId}:${q}`];if(item?.channel_message_id)qualities[q]={available:true,size:item.size||'',codec:item.codec||'',audio:item.audio||'',channel_message_id:Number(item.channel_message_id)};}res.json({ok:true,mediaType,mediaId,qualities});}));
+app.post('/api/tv-download',safeRun(async(req,res)=>{
+  const {initData,mediaId,scope='episode',season,episode,quality}=req.body||{};
+  const user=validateTelegramInitData(String(initData||''));
+  if(!user?.id) return res.status(401).json({ok:false,error:'Open the Mini App from Telegram so your session can be verified.'});
+  const id=String(mediaId||'').trim();
+  const sc=String(scope||'episode').toLowerCase().trim();
+  const s=Number(season||0);
+  const e=Number(episode||0);
+  const q=String(quality||'').toUpperCase().trim();
+
+  if(!/^\d+$/.test(id)||Number(id)<=0) return res.status(400).json({ok:false,error:'Invalid TV Series ID.'});
+  if(!['episode','season'].includes(sc)) return res.status(400).json({ok:false,error:'Invalid TV download scope.'});
+  if(!Number.isInteger(s)||s<=0) return res.status(400).json({ok:false,error:'Invalid season.'});
+  if(sc==='episode' && (!Number.isInteger(e)||e<=0)) return res.status(400).json({ok:false,error:'Invalid episode.'});
+  if(!qualityOrder().includes(q)) return res.status(400).json({ok:false,error:'Unsupported quality.'});
+
+  const map=await loadTvDownloadMap();
+  const item=map[tvDownloadKey(id,sc,s,e,q)];
+  if(!item?.channel_message_id) return res.status(404).json({ok:false,error:`${q} is not available for this TV entry.`});
+
+  const result=await telegramCopyMessage(user.id,item.channel_chat_id,item.channel_message_id);
+  res.json({ok:true,delivered:true,mediaType:'tv',scope:sc,season:s,episode:sc==='season'?0:e,quality:q,telegramMessageId:result?.result?.message_id||null});
+}));
+
 app.post('/api/download',safeRun(async(req,res)=>{const {initData,mediaType='movie',mediaId,quality}=req.body||{};if(mediaType!=='movie')return res.status(400).json({ok:false,error:'Telegram file delivery is available for movies only.'});const user=validateTelegramInitData(String(initData||''));if(!user?.id)return res.status(401).json({ok:false,error:'Open the Mini App from Telegram so your session can be verified.'});const q=String(quality||'').toUpperCase();if(!qualityOrder().includes(q))return res.status(400).json({ok:false,error:'Unsupported quality.'});const map=await loadDownloadMap();const item=map[`movie:${mediaId}:${q}`];if(!item?.channel_message_id)return res.status(404).json({ok:false,error:`${q} is not available for this movie.`});const result=await telegramCopyMessage(user.id,item.channel_chat_id||MOVIE_UPLOAD_CHANNEL_CHAT_ID,item.channel_message_id);res.json({ok:true,delivered:true,quality:q,telegramMessageId:result?.result?.message_id||null});}));
 app.get('/api/movies/:id',safeRun(async(req,res)=>{
   const id=Number(req.params.id);
