@@ -1849,6 +1849,20 @@ app.get('/api/admin/tv-search',safeRun(async(req,res)=>{
   const results=(data?.results||[]).filter(x=>x?.poster_path).slice(0,20).map(x=>normalize(x,'tv',g));
   res.json({ok:true,results,total:results.length,source:'tmdb'});
 }));
+app.get('/api/tmdb-search',safeRun(async(req,res)=>{
+  const q=String(req.query.q||'').trim();
+  if(!q) return res.json({ok:true,results:[],total:0,source:'tmdb'});
+  const [movieGenres,tvGenres,data]=await Promise.all([
+    genreMapFor('movie'),
+    genreMapFor('tv'),
+    tmdb('/search/multi',{query:q,include_adult:'false',page:1})
+  ]);
+  const results=(data?.results||[])
+    .filter(x=>x?.poster_path&&(x.media_type==='movie'||x.media_type==='tv'))
+    .slice(0,20)
+    .map(x=>normalize(x,x.media_type==='tv'?'tv':'movie',x.media_type==='tv'?tvGenres:movieGenres));
+  res.json({ok:true,results,total:results.length,source:'tmdb'});
+}));
 
 app.get('/api/search',safeRun(async(req,res)=>{
   const q=String(req.query.q||'').trim();
