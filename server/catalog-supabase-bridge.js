@@ -8,6 +8,7 @@ const CATALOG_FILE = path.join(process.cwd(), 'server', 'published-catalog.json'
 const TV_CATALOG_FILE = path.join(process.cwd(), 'server', 'published-tv-catalog.json');
 const TV_CHANNELS_FILE = path.join(process.cwd(), 'server', 'tv-channel-map.json');
 const DOWNLOADS_FILE = path.join(process.cwd(), 'server', 'downloads.json');
+const TV_DOWNLOADS_FILE = path.join(process.cwd(), 'server', 'tv-downloads.json');
 const LIVE_MESSAGE_FILE = path.join(process.cwd(), 'server', 'live-content-message.json');
 const SUPABASE_URL = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SUPABASE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
@@ -138,6 +139,7 @@ fs.readFile = async function(file, options) {
   const isMovie = target === path.resolve(CATALOG_FILE);
   const isTv = target === path.resolve(TV_CATALOG_FILE);
   const isTvChannels = target === path.resolve(TV_CHANNELS_FILE);
+  const isTvDownloads = target === path.resolve(TV_DOWNLOADS_FILE);
   const isDownloads = target === path.resolve(DOWNLOADS_FILE);
   const callerStack = String(new Error().stack || '');
 
@@ -183,6 +185,27 @@ fs.readFile = async function(file, options) {
     return originalReadFile(file, options);
   }
 
+  if (isTvDownloads) {
+    try {
+      const local = await originalReadFile(file, options);
+      const localText = typeof local === 'string' ? local : Buffer.from(local).toString('utf8');
+      const localMap = JSON.parse(localText);
+      if (localMap && typeof localMap === 'object' && Object.keys(localMap).length > 0) return local;
+    } catch {}
+
+    try {
+      const payload = await fetchRuntimeCatalog('tvDownloads');
+      if (payload && typeof payload === 'object') {
+        const text = JSON.stringify(payload);
+        return typeof options === 'string' || options?.encoding ? text : Buffer.from(text);
+      }
+    } catch (error) {
+      console.warn('[catalog-bridge] Supabase TV downloads read failed; using local file:', error.message || error);
+    }
+
+    return originalReadFile(file, options);
+  }
+
   if (isMovie || isTv) {
     const isRequestGroupSearch = callerStack.includes('handleGroupTvRequest') || callerStack.includes('resolveRequestedMovie');
 
@@ -216,6 +239,7 @@ fs.writeFile = async function(file, data, options) {
   const target = path.resolve(String(file));
   const runtimeKey =
     target === path.resolve(DOWNLOADS_FILE) ? 'downloads' :
+    target === path.resolve(TV_DOWNLOADS_FILE) ? 'tvDownloads' :
     target === path.resolve(CATALOG_FILE) ? 'movieCatalog' :
     target === path.resolve(TV_CATALOG_FILE) ? 'tvCatalog' :
     target === path.resolve(TV_CHANNELS_FILE) ? 'tvChannels' : '';
