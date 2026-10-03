@@ -1840,6 +1840,16 @@ app.get('/api/movies/:id',safeRun(async(req,res)=>{
 app.get('/api/trending',safeRun(async(req,res)=>{const g=await genreMapFor('movie');const d=await tmdb('/trending/all/week');res.json({ok:true,results:pickResults(d).map(x=>normalize(x,x.media_type==='tv'?'tv':'movie',g))});}));
 app.get('/api/movies',safeRun(async(req,res)=>{const g=await genreMapFor('movie');const d=await tmdb('/movie/popular',{page:1});const catalog=await loadCatalog();const pub=Object.values(catalog);const live=pickResults(d).map(x=>normalize(x,'movie',g));res.json({ok:true,results:[...pub,...live.filter(x=>!catalog[String(x.id)])].slice(0,30)});}));
 app.get('/api/tv',safeRun(async(req,res)=>{const g=await genreMapFor('tv');const d=await tmdb('/tv/popular',{page:1});res.json({ok:true,results:pickResults(d).map(x=>normalize(x,'tv',g))});}));
+app.get('/api/admin/tv-search',safeRun(async(req,res)=>{
+  if(!requireAdmin(req,res)) return;
+  const q=String(req.query.q||'').trim();
+  if(!q) return res.json({ok:true,results:[],total:0,source:'tmdb'});
+  const g=await genreMapFor('tv');
+  const data=await tmdb('/search/tv',{query:q,include_adult:'false',page:1});
+  const results=(data?.results||[]).filter(x=>x?.poster_path).slice(0,20).map(x=>normalize(x,'tv',g));
+  res.json({ok:true,results,total:results.length,source:'tmdb'});
+}));
+
 app.get('/api/search',safeRun(async(req,res)=>{
   const q=String(req.query.q||'').trim();
   if(!q) return res.json({ok:true,results:[],total:0,source:'cine-universe-database'});
