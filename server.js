@@ -268,23 +268,24 @@ function tvUpdateText(tv,episodeLabel=''){
 
 // ---------- V82 Telegram message design (isolated from existing catalog/UI logic) ----------
 function channelMovieUpdateText(movie){
-  const title=movie.title||movie.original_title||'Movie';
-  const year=String(movie.release_date||'').slice(0,4);
-  const imdb=String(movie.imdbRating||'').trim();
-  const genres=(movie.genres||[]).map(g=>g.name).filter(Boolean).slice(0,2);
-  const cast=(movie.credits?.cast||[]).slice(0,3).map(x=>x.name).filter(Boolean);
-  const overview=String(movie.overview||'').trim();
-  const shortOverview=overview.length>110 ? `${overview.slice(0,107).trimEnd()}…` : overview;
+  const title=String(movie.title||movie.original_title||'Movie').trim();
+  const year=String(movie.release_date||'').slice(0,4)||'—';
+  const imdb=String(movie.imdbRating||'').trim()||'—';
+  const genres=(movie.genres||[]).map(g=>g.name).filter(Boolean);
+  const overview=String(movie.overview||'No description available.').trim();
+
   return [
-    '🎬 <b>CINE UNIVERSE</b>',
-    `🔥 <b>${htmlEscape(title)}</b>${year?` • ${htmlEscape(year)}`:''}`,
-    imdb?`⭐ <b>IMDb</b> ${htmlEscape(imdb)}/10`:'⭐ <b>IMDb</b> —',
-    genres.length?`🎭 ${htmlEscape(genres.join(' • '))}`:'',
-    cast.length?`👥 ${htmlEscape(cast.join(' • '))}`:'',
-    shortOverview?`📝 ${htmlEscape(shortOverview)}`:'',
-    '',
-    '📥 <b>Download options below 👇</b>'
-  ].filter(Boolean).join('\n');
+    '◈ ─── 𝗡𝗘𝗪 𝗠𝗢𝗩𝗜𝗘 ─── ◈',
+    `🎬 ${toBoldUnicode(htmlEscape(title))}`,
+    `𝗜𝗠𝗗𝗕  ⭐ ${htmlEscape(imdb)}/10`,
+    `𝗥𝗘𝗟𝗘𝗔𝗦𝗘  ·  ${htmlEscape(year)}`,
+    `𝗚𝗘𝗡𝗥𝗘  ·  ${htmlEscape(genres.join(' • ')||'—')}`,
+    '📝 𝗦𝗧𝗢𝗥𝗬',
+    htmlEscape(overview),
+    '━━━━━━━━━━━━━━━━━━',
+    '▶️ 𝗠𝗢𝗩𝗜𝗘 𝗔𝗩𝗔𝗜𝗟𝗔𝗕𝗟𝗘',
+    '© 𝟮𝟬𝟮𝟲 𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘 · 𝗗𝗜𝗡𝗜𝗗𝗨 𝗜𝗡𝗗𝗨𝗪𝗔𝗥𝗔'
+  ].join('\n');
 }
 
 function toBoldUnicode(value=''){
@@ -1303,7 +1304,9 @@ async function publishMovieUpdateFromChannelPost(post){
   const map=await loadDownloadMap();
   if(fileInfo.quality){const key=`movie:${movie.id}:${fileInfo.quality}`;map[key]={...(map[key]||{}),channel_chat_id:String(MOVIE_UPLOAD_CHANNEL_CHAT_ID),channel_message_id:Number(post.message_id),title:details.title||details.original_title||'',size:post.document?.file_size||post.video?.file_size?String(post.document?.file_size||post.video?.file_size):'',updated_at:new Date().toISOString(),auto_detected:true};await fs.writeFile(DOWNLOADS_FILE,JSON.stringify(map,null,2));}
   const catalog=await loadCatalog();catalog[String(movie.id)]=buildCatalogEntry(details,map,movie.id,imdb);await saveCatalog(catalog);
-  const fresh=await loadDownloadMap(),rows=movieUpdateQualityRows(fresh,movie.id),mini=buildMiniAppUrl(movie.id),nav=[];if(mini)nav.push({text:'🎬 Open in Mini App',url:mini});nav.push({text:'🤖 Open Bot',url:`https://t.me/${BOT_USERNAME}`});rows.push(nav);
+  const rows=[
+    [{text:'⚡️𝐂𝐈𝐍𝐄 𝐔𝐍𝐈𝐕𝐄𝐑𝐒𝐄 | 𝐖𝐀𝐈𝐓𝐈𝐍𝐆 𝐙𝐎𝐍𝐄⚡️',url:'https://t.me/+KKGRIS2pU18wYWU1'}]
+  ];
   if(!details.poster_path)return {skipped:true,reason:'tmdb_movie_has_no_poster',tmdbId:movie.id,title:details.title};
   const sent=await telegramSendPhoto(UPDATE_CHANNEL_CHAT_ID,`${POSTER_BASE}${details.poster_path}`,channelMovieUpdateText(details),{inline_keyboard:rows});
   return {published:true,tmdbId:movie.id,title:details.title,quality:fileInfo.quality||'UNKNOWN',qualitySource:fileInfo.qualitySource,sourceMessageId:Number(post.message_id),updateMessageId:sent?.result?.message_id||null,miniAppUrl:mini||null};
