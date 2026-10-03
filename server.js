@@ -1697,9 +1697,52 @@ app.post('/api/admin/tv-downloads', safeRun(async(req,res)=>{
   };
   await saveTvDownloadMap(map);
 
-  res.json({ok:true,action:'saved',mediaType:'tv',mediaId,entry:{key,...map[key]}});
-}));
+  const latestLabel=scope==='season'
+    ? `S${String(season).padStart(2,'0')} Full Season • ${quality}`
+    : `S${String(season).padStart(2,'0')}E${String(episode).padStart(2,'0')} • ${quality}`;
 
+  try{
+    const catalog=await loadTvCatalog();
+    const existing=catalog[String(mediaId)]||{};
+    catalog[String(mediaId)]={
+      ...existing,
+      id:mediaId,
+      type:'TV Series',
+      title,
+      year:String(details.first_air_date||'').slice(0,4)||existing.year||'—',
+      rating:Number(details.vote_average||0).toFixed(1),
+      poster:details.poster_path?`${POSTER_BASE}${details.poster_path}`:(existing.poster||''),
+      backdrop:details.backdrop_path?`${BACKDROP_BASE}${details.backdrop_path}`:(existing.backdrop||''),
+      description:details.overview||existing.description||'',
+      genres:(details.genres||[]).map(g=>g.name),
+      originalLanguage:details.original_language||existing.originalLanguage||'',
+      originalCountry:(details.origin_country||[]).join(' '),
+      originCountry:details.origin_country||[],
+      origin_country:details.origin_country||[],
+      productionCountries:details.production_countries||[],
+      production_countries:details.production_countries||[],
+      countryCode:details.origin_country?.[0]||existing.countryCode||'',
+      cast:(details.credits?.cast||[]).slice(0,8).map(x=>x.name).filter(Boolean),
+      privateChannelUrl:existing.privateChannelUrl||'',
+      lastEpisode:latestLabel,
+      updatedAt:new Date().toISOString()
+    };
+    await saveTvCatalog(catalog);
+  }catch(catalogError){
+    console.warn('[manual-tv-admin] TV catalog sync failed:',catalogError.message||catalogError);
+  }
+
+  let update={published:false,messageId:null,error:null};
+  try{
+    const published=await publishTvCatalogUpdateById(mediaId, await getTvChannelUrl(mediaId));
+    update={published:Boolean(published?.published),messageId:published?.updateMessageId||null,error:null};
+  }catch(updateError){
+    update={published:false,messageId:null,error:updateError.message||'TV update channel publish failed.'};
+    console.warn('[manual-tv-admin] update channel publish failed:',update.error);
+  }
+
+  res.json({ok:true,action:'saved',mediaType:'tv',mediaId,title,entry:{key,...map[key]},update});
+}));
 app.delete('/api/admin/tv-downloads', safeRun(async(req,res)=>{
   if(!requireAdmin(req,res)) return;
   const mediaId=String(req.query.mediaId||'').trim();
