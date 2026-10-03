@@ -196,7 +196,7 @@ fs.writeFile = async function(file, data, options) {
   try {
     const localText = typeof data === 'string' ? data : Buffer.from(data).toString('utf8');
     const localMap = JSON.parse(localText);
-    if (localMap && typeof localMap === 'object' && Object.keys(localMap).length > 0) {
+    if (localMap && typeof localMap === 'object') {
       await saveRuntimeCatalog('downloads', localMap);
       console.log(`[catalog-bridge] Downloads synced to Supabase: ${Object.keys(localMap).length} records.`);
     }
