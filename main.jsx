@@ -161,16 +161,11 @@ function App(){
     try{
       setAdminLoading(true);
       const q=encodeURIComponent(adminSearch.trim());
-      const [movieResult,tvResult]=await Promise.allSettled([
-        apiGet(`/search?q=${q}`),
-        adminApi(`/admin/tv-search?q=${q}`)
-      ]);
-      const movieResults=movieResult.status==="fulfilled"?(movieResult.value.results||[]):[];
-      const tvResults=tvResult.status==="fulfilled"?(tvResult.value.results||[]):[];
-      const merged=[...movieResults,...tvResults].filter((item,index,self)=>self.findIndex(x=>x.mediaType===item.mediaType&&x.id===item.id)===index);
-      setAdminResults(merged);
-      setAdminMessage(merged.length?"":"No movie or TV results found.");
-    }catch(e){setAdminMessage(e.message||"Search failed");}
+      const data=await apiGet(`/tmdb-search?q=${q}`);
+      const results=Array.isArray(data.results)?data.results:[];
+      setAdminResults(results);
+      setAdminMessage(results.length?"":"No movie or TV results found.");
+    }catch(e){setAdminMessage(e.message||"Search failed");setAdminResults([]);}
     finally{setAdminLoading(false);}
   }
   async function loadAdminMedia(media){
