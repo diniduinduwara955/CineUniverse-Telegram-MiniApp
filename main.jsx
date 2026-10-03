@@ -315,6 +315,7 @@ function App(){
   </div>
 
   {(adminSelected?.mediaType==="tv" || adminSelected?.type==="TV Series") ? (
+    <ManualTvManager adminApi={adminApi} media={adminSelected} />
     <div className="admin-tv-channel-card glass">
       <div className="admin-card-head">
         <div>
