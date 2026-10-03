@@ -879,17 +879,62 @@ function extractChannelFile(post){
 async function telegramSendPhoto(chatId, photo, caption, replyMarkup, extra={}) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) throw new Error('TELEGRAM_BOT_TOKEN is not configured.');
+
+  const photoValue=String(photo||'').trim();
+  const apiUrl='https://api.telegram.org/bot'+token+'/sendPhoto';
+
+  // Telegram occasionally returns IMAGE_PROCESS_FAILED when it tries to fetch
+  // a remote TMDB image URL itself. Download the poster on our server first
+  // and upload the bytes as multipart/form-data instead.
+  if (/^https?:\/\//i.test(photoValue)) {
+    const imageResponse=await fetch(photoValue,{
+      headers:{
+        'User-Agent':'Mozilla/5.0 CineUniverseBot/102',
+        'Accept':'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+      }
+    });
+    if(!imageResponse.ok) {
+      throw new Error(`Poster download failed: HTTP ${imageResponse.status}`);
+    }
+
+    const contentType=imageResponse.headers.get('content-type')||'image/jpeg';
+    const bytes=await imageResponse.arrayBuffer();
+    if(!bytes.byteLength) throw new Error('Poster download returned an empty image.');
+
+    const form=new FormData();
+    form.append('chat_id',String(chatId));
+    form.append('photo',new Blob([bytes],{type:contentType}),'poster.jpg');
+    form.append('caption',String(caption||''));
+    form.append('parse_mode','HTML');
+    if(replyMarkup!==undefined && replyMarkup!==null) {
+      form.append('reply_markup',JSON.stringify(replyMarkup));
+    }
+    for(const [key,value] of Object.entries(extra||{})) {
+      if(value===undefined||value===null) continue;
+      form.append(key,typeof value==='object'?JSON.stringify(value):String(value));
+    }
+
+    const response=await fetch(apiUrl,{method:'POST',body:form});
+    const data=await response.json();
+    if(!response.ok || !data.ok) {
+      const err=new Error(data?.description || `Telegram HTTP ${response.status}`);
+      err.status=response.status;
+      throw err;
+    }
+    return data;
+  }
+
   const payload={
     chat_id: chatId,
-    photo,
+    photo: photoValue,
     caption,
     parse_mode: 'HTML',
     reply_markup: replyMarkup,
     ...extra
   };
-  const response = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+  const response = await fetch(apiUrl, {
     method: 'POST',
-    headers: {'content-type':'application/json'},
+    headers: {'content-type': 'application/json'},
     body: JSON.stringify(payload)
   });
   const data = await response.json();
