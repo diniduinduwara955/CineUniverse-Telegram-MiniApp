@@ -330,18 +330,27 @@ function channelTvUpdateText(tv,episodeLabel=''){
 }
 
 function groupMovieResultText(movie, qualities=[]){
-  const title=movie.title||movie.original_title||'Movie';
-  const year=String(movie.release_date||'').slice(0,4);
-  const imdb=String(movie.imdbRating||'').trim();
+  const title=String(movie.title||movie.original_title||'Movie').trim();
+  const year=String(movie.release_date||'').slice(0,4)||'—';
+  const imdb=String(movie.imdbRating||'').trim()||'—';
+  const tmdb=Number(movie.vote_average||0).toFixed(1);
+  const genres=(movie.genres||[]).map(g=>g.name).filter(Boolean).slice(0,3);
   const qualityText=qualities.length?qualities.join(' • '):'No quality';
   return [
-    `🎬 <b>${htmlEscape(title)}</b>${year?` • ${htmlEscape(year)}`:''}`,
-    imdb?`⭐ IMDb ${htmlEscape(imdb)}/10`:'⭐ IMDb —',
+    '🎬 𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘',
+    '',
+    `🔥 ${htmlEscape(title)} · ${htmlEscape(year)}`,
+    '',
+    `⭐ IMDb ${htmlEscape(imdb)}/10   ◈ TMDB ${htmlEscape(tmdb)}/10`,
+    `🎭 ${htmlEscape(genres.join(' • ')||'—')}`,
+    '',
+    '━━━━━━━━━━━━━━━━━━',
+    '📥 𝗤𝗨𝗔𝗟𝗜𝗧𝗬 𝗔𝗩𝗔𝗜𝗟𝗔𝗕𝗟𝗘',
     `✅ ${htmlEscape(qualityText)}`,
-    '📥 <b>Quality එකක් තෝරන්න 👇</b>'
-  ].join('\n');
+    '',
+    '© 𝟮𝟬𝟮𝟲 𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘 · 𝗗𝗜𝗡𝗜𝗗𝗨 𝗜𝗡𝗗𝗨𝗪𝗔𝗥𝗔'
+  ].join('\\n');
 }
-
 function groupTvResultText(tv){
   const title=tv.title||'TV Series';
   const episode=String(tv.lastEpisode||'').trim();
