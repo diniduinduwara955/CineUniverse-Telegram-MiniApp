@@ -344,7 +344,7 @@ function groupMovieResultText(movie, qualities=[]){
     '👇 𝗖𝗛𝗢𝗢𝗦𝗘 𝗤𝗨𝗔𝗟𝗜𝗧𝗬',
     '',
     '© 𝟮𝟬𝟮𝟲 𝗖𝗜𝗡𝗘 𝗨𝗡𝗜𝗩𝗘𝗥𝗦𝗘 · 𝗗𝗜𝗡𝗜𝗗𝗨 𝗜𝗡𝗗𝗨𝗪𝗔𝗥𝗔'
-  ].join('\\n');
+  ].join('\n');
 }
 function groupTvResultText(tv){
   const title=String(tv.title||'TV Series').trim();
