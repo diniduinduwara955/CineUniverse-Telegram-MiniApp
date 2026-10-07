@@ -270,14 +270,14 @@ function tvUpdateText(tv,episodeLabel=''){
 function channelMovieUpdateText(movie){
   const title=String(movie.title||movie.original_title||'Movie').trim();
   const year=String(movie.release_date||'').slice(0,4)||'—';
-  const imdb=String(movie.imdbRating||'').trim()||'—';
+  const tmdb=Number(movie.vote_average||0).toFixed(1);
   const genres=(movie.genres||[]).map(g=>g.name).filter(Boolean);
   const overview=String(movie.overview||'No description available.').trim();
 
   return [
     '◈ ─── 𝗡𝗘𝗪 𝗠𝗢𝗩𝗜𝗘 ─── ◈',
     `🎬 ${toBoldUnicode(htmlEscape(title))}`,
-    `𝗜𝗠𝗗𝗕  ⭐ ${htmlEscape(imdb)}/10`,
+    `𝗧𝗠𝗗𝗕  ⭐ ${htmlEscape(tmdb)}/10`,
     `𝗥𝗘𝗟𝗘𝗔𝗦𝗘  ·  ${htmlEscape(year)}`,
     `𝗚𝗘𝗡𝗥𝗘  ·  ${htmlEscape(genres.join(' • ')||'—')}`,
     '📝 𝗦𝗧𝗢𝗥𝗬',
@@ -309,15 +309,17 @@ function tvSeasonNumber(value=''){
 function channelTvUpdateText(tv,episodeLabel=''){
   const title=String(tv.name||tv.original_name||'TV Series').trim();
   const year=String(tv.first_air_date||'').slice(0,4)||'—';
-  const imdb=String(tv.imdbRating||'').trim()||'—';
+  const tmdb=Number(tv.vote_average||0).toFixed(1);
   const genres=(tv.genres||[]).map(g=>g.name).filter(Boolean);
-  const season=tvSeasonNumber(episodeLabel)||'—';
+  const season=Number(tv.number_of_seasons||0)>0
+    ? String(Number(tv.number_of_seasons)).padStart(2,'0')
+    : (tvSeasonNumber(episodeLabel)||'—');
   const overview=String(tv.overview||'No description available.').trim();
 
   return [
     '◈ ─── 𝗡𝗘𝗪 𝗦𝗘𝗥𝗜𝗘𝗦 ─── ◈',
     `📺 ${toBoldUnicode(htmlEscape(title))}`,
-    `𝗜𝗠𝗗𝗕  ⭐ ${htmlEscape(imdb)}/10`,
+    `𝗧𝗠𝗗𝗕  ⭐ ${htmlEscape(tmdb)}/10`,
     `𝗥𝗘𝗟𝗘𝗔𝗦𝗘  ·  ${htmlEscape(year)}`,
     `𝗚𝗘𝗡𝗥𝗘  ·  ${htmlEscape(genres.join(' • ')||'—')}`,
     `𝗦𝗘𝗔𝗦𝗢𝗡  ·  ${htmlEscape(season)}`,
